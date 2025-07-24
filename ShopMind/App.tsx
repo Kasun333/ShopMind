@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import LoginScreen from './src/screens/LoginScreen';
+import SignupScreen from './src/screens/SignupScreen';
 import DriverScreen from './src/screens/DriverScreen';
 import EcommerceScreen from './src/screens/EcommerceScreen';
 import StoreKeeperScreen from './src/screens/StoreKeeperScreen';
@@ -15,6 +16,7 @@ interface User {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [showSignup, setShowSignup] = useState(false);
 
   const handleLogin = (userData: User, userToken: string) => {
     setUser(userData);
@@ -24,11 +26,37 @@ export default function App() {
   const handleLogout = () => {
     setUser(null);
     setToken(null);
+    setShowSignup(false);
   };
 
-  // If user is not logged in, show login screen
+  const handleShowSignup = () => {
+    setShowSignup(true);
+  };
+
+  const handleBackToLogin = () => {
+    setShowSignup(false);
+  };
+
+  const handleSignupSuccess = () => {
+    setShowSignup(false);
+  };
+
+  // If user is not logged in, show login or signup screen
   if (!user || !token) {
-    return <LoginScreen onLogin={handleLogin} />;
+    if (showSignup) {
+      return (
+        <SignupScreen 
+          onSignupSuccess={handleSignupSuccess}
+          onBackToLogin={handleBackToLogin}
+        />
+      );
+    }
+    return (
+      <LoginScreen 
+        onLogin={handleLogin} 
+        onShowSignup={handleShowSignup}
+      />
+    );
   }
 
   // Navigate based on user role

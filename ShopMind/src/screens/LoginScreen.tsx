@@ -13,9 +13,10 @@ interface User {
 
 interface LoginScreenProps {
   onLogin: (userData: User, token: string) => void;
+  onShowSignup: () => void;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [focusedInput, setFocusedInput] = useState<null | 'username' | 'password'>(null);
@@ -155,6 +156,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           <TouchableOpacity style={styles.forgotPassword}>
             <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.signupButton} onPress={onShowSignup}>
+            <Text style={styles.signupButtonText}>Create New Account</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -277,6 +282,19 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontSize: 14,
     fontWeight: '500',
+  },
+  signupButton: {
+    alignItems: 'center',
+    marginTop: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    borderRadius: 12,
+  },
+  signupButtonText: {
+    color: '#3B82F6',
+    fontSize: 14,
+    fontWeight: '600',
   },
   toast: {
     position: 'absolute',
