@@ -1,16 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { User } from '../types/User';
 
 const { width } = Dimensions.get('window');
 
 interface StoreKeeperScreenProps {
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    fullName: string;
-    role: string;
-  };
+  user: User;
   token: string;
   onLogout: () => void;
 }

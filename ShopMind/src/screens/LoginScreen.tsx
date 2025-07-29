@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Dimensions, Animated } from 'react-native';
+import { User } from '../types/User';
 
 const { width, height } = Dimensions.get('window');
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  fullName: string;
-  role: string;
-}
 
 interface LoginScreenProps {
   onLogin: (userData: User, token: string) => void;

@@ -4,17 +4,12 @@ import BottomNavigation from '../components/BottomNavigation';
 import MessagesScreen from './MessagesScreen';
 import CartScreen from './CartScreen';
 import AccountScreen from './AccountScreen';
+import { User } from '../types/User';
 
 const { width } = Dimensions.get('window');
 
 interface EcommerceScreenProps {
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    fullName: string;
-    role: string;
-  };
+  user: User;
   token: string;
   onLogout: () => void;
 }

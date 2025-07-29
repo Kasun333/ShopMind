@@ -1,16 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { User } from '../types/User';
 
 const { width } = Dimensions.get('window');
 
 interface DriverScreenProps {
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    fullName: string;
-    role: string;
-  };
+  user: User;
   token: string;
   onLogout: () => void;
 }

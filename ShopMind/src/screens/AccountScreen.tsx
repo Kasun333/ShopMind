@@ -1,16 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
+import { User } from '../types/User';
 
 const { width } = Dimensions.get('window');
 
 interface AccountScreenProps {
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    fullName: string;
-    role: string;
-  };
+  user: User;
   token: string;
   onLogout: () => void;
 }
@@ -39,20 +34,73 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ user, token, onLogout }) 
         {/* User Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user.fullName.split(' ').map(name => name[0]).join('').toUpperCase()}
+            {user.profileImageUrl ? (
+              <Image source={{ uri: user.profileImageUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {user.fullName.split(' ').map(name => name[0]).join('').toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={[
+              styles.statusBadge,
+              user.accountStatus === 'ACTIVE' ? styles.statusActive : styles.statusInactive
+            ]}>
+              <Text style={styles.statusText}>
+                {user.accountStatus === 'ACTIVE' ? '●' : '○'}
               </Text>
             </View>
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user.fullName}</Text>
             <Text style={styles.profileEmail}>{user.email}</Text>
-            <Text style={styles.profileRole}>{user.role}</Text>
+            <Text style={styles.profilePhone}>{user.phoneNumber}</Text>
+            <View style={styles.roleContainer}>
+              <Text style={styles.profileRole}>{user.role}</Text>
+              <Text style={styles.profileStatus}>{user.accountStatus}</Text>
+            </View>
           </View>
           <TouchableOpacity style={styles.editProfileButton}>
             <Text style={styles.editProfileText}>Edit</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* User Details Cards */}
+        <View style={styles.detailsContainer}>
+          <View style={styles.detailCard}>
+            <Text style={styles.detailLabel}>📍 Address</Text>
+            <Text style={styles.detailValue}>{user.formattedAddress}</Text>
+          </View>
+
+          <View style={styles.detailCard}>
+            <Text style={styles.detailLabel}>🎂 Date of Birth</Text>
+            <Text style={styles.detailValue}>
+              {new Date(user.dateOfBirth).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </Text>
+          </View>
+
+          <View style={styles.detailCard}>
+            <Text style={styles.detailLabel}>📅 Member Since</Text>
+            <Text style={styles.detailValue}>
+              {new Date(user.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </Text>
+          </View>
+
+          <View style={styles.detailCard}>
+            <Text style={styles.detailLabel}>🌍 Location</Text>
+            <Text style={styles.detailValue}>
+              {user.latitude.toFixed(4)}, {user.longitude.toFixed(4)}
+            </Text>
+          </View>
         </View>
 
         {/* Account Options */}
@@ -147,6 +195,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginRight: 16,
+    position: 'relative',
   },
   avatar: {
     width: 64,
@@ -156,10 +205,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
   avatarText: {
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: '700',
+  },
+  statusBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  statusActive: {
+    backgroundColor: '#10B981',
+  },
+  statusInactive: {
+    backgroundColor: '#6B7280',
+  },
+  statusText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
   profileInfo: {
     flex: 1,
@@ -175,11 +252,31 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 2,
   },
+  profilePhone: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  roleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   profileRole: {
     fontSize: 12,
     color: '#3B82F6',
     fontWeight: '600',
     backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  profileStatus: {
+    fontSize: 12,
+    color: '#10B981',
+    fontWeight: '600',
+    backgroundColor: '#F0FDF4',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -197,6 +294,36 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontSize: 14,
     fontWeight: '600',
+  },
+  detailsContainer: {
+    marginBottom: 24,
+  },
+  detailCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '500',
   },
   optionsContainer: {
     marginBottom: 24,

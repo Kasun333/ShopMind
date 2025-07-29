@@ -4,14 +4,7 @@ import SignupScreen from './src/screens/SignupScreen';
 import DriverScreen from './src/screens/DriverScreen';
 import EcommerceScreen from './src/screens/EcommerceScreen';
 import StoreKeeperScreen from './src/screens/StoreKeeperScreen';
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  fullName: string;
-  role: string;
-}
+import { User } from './src/types/User';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
