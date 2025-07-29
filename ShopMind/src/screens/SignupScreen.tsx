@@ -294,7 +294,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
           focusedInput === field && styles.inputFocused
         ]}
         placeholder={placeholder}
-        placeholderTextColor="#6B7280"
+        placeholderTextColor="#94A3B8"
         value={formData[field as keyof typeof formData]}
         onChangeText={(value) => updateField(field, value)}
         onFocus={() => setFocusedInput(field)}
@@ -317,7 +317,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
             isEmailVerified && styles.inputVerified
           ]}
           placeholder="Enter your email address"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor="#94A3B8"
           value={formData.email}
           onChangeText={(value) => updateField('email', value)}
           onFocus={() => setFocusedInput('email')}
@@ -358,7 +358,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
             focusedInput === 'formattedAddress' && styles.inputFocused
           ]}
           placeholder="Enter your address or select on map"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor="#94A3B8"
           value={formData.formattedAddress}
           onChangeText={(value) => updateField('formattedAddress', value)}
           onFocus={() => setFocusedInput('formattedAddress')}
@@ -466,7 +466,7 @@ export default SignupScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#F8FAFC',
   },
   backgroundGradient: {
     position: 'absolute',
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#F8FAFC',
     opacity: 0.95,
   },
   scrollView: {
@@ -490,19 +490,19 @@ const styles = StyleSheet.create({
   signupCard: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 32,
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: {
       width: 0,
-      height: 20,
+      height: 10,
     },
-    shadowOpacity: 0.5,
-    shadowRadius: 40,
-    elevation: 25,
+    shadowOpacity: 0.08,
+    shadowRadius: 25,
+    elevation: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#E2E8F0',
     alignSelf: 'center',
   },
   header: {
@@ -512,13 +512,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#64748B',
     fontWeight: '400',
   },
   form: {
@@ -530,18 +530,18 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#E5E7EB',
+    color: '#374151',
     marginLeft: 4,
   },
   input: {
     height: 52,
-    backgroundColor: '#111111',
+    backgroundColor: '#F8FAFC',
     borderWidth: 2,
-    borderColor: '#2A2A2A',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '500',
   },
   emailInputRow: {
@@ -552,37 +552,37 @@ const styles = StyleSheet.create({
   emailInput: {
     flex: 1,
     height: 52,
-    backgroundColor: '#111111',
+    backgroundColor: '#F8FAFC',
     borderWidth: 2,
-    borderColor: '#2A2A2A',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '500',
   },
   verifyButton: {
     height: 52,
     paddingHorizontal: 20,
-    backgroundColor: '#10B981',
+    backgroundColor: '#16A34A',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 80,
-    shadowColor: '#10B981',
+    shadowColor: '#16A34A',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 6,
   },
   verifyButtonVerified: {
     backgroundColor: '#059669',
   },
   verifyButtonLoading: {
-    backgroundColor: '#6B7280',
+    backgroundColor: '#94A3B8',
   },
   verifyButtonText: {
     color: '#FFFFFF',
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   verifiedText: {
-    color: '#10B981',
+    color: '#16A34A',
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
@@ -607,14 +607,14 @@ const styles = StyleSheet.create({
   addressInput: {
     flex: 1,
     minHeight: 52,
-    backgroundColor: '#111111',
+    backgroundColor: '#F8FAFC',
     borderWidth: 2,
-    borderColor: '#2A2A2A',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '500',
     textAlignVertical: 'top',
   },
@@ -630,39 +630,39 @@ const styles = StyleSheet.create({
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 6,
   },
   mapButtonText: {
     fontSize: 20,
   },
   inputVerified: {
-    borderColor: '#10B981',
-    backgroundColor: '#064E3B',
+    borderColor: '#16A34A',
+    backgroundColor: '#F0FDF4',
   },
   inputFocused: {
     borderColor: '#3B82F6',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#3B82F6',
     shadowOffset: {
       width: 0,
       height: 0,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 4,
   },
   optionalSection: {
     marginTop: 16,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#2A2A2A',
+    borderTopColor: '#E2E8F0',
   },
   optionalTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: '#64748B',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -676,14 +676,14 @@ const styles = StyleSheet.create({
     shadowColor: '#3B82F6',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
   buttonDisabled: {
-    backgroundColor: '#6B7280',
+    backgroundColor: '#94A3B8',
     shadowOpacity: 0.1,
   },
   signupButtonText: {
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   backToLoginText: {
-    color: '#9CA3AF',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -709,31 +709,31 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 60,
     right: 20,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     minWidth: 280,
     maxWidth: width * 0.9,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 10,
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: '#E2E8F0',
     zIndex: 1000,
   },
   toastSuccess: {
-    backgroundColor: '#065F46',
-    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+    borderColor: '#16A34A',
   },
   toastError: {
-    backgroundColor: '#7F1D1D',
+    backgroundColor: '#FEF2F2',
     borderColor: '#EF4444',
   },
   toastIndicator: {
@@ -743,13 +743,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   indicatorSuccess: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#16A34A',
   },
   indicatorError: {
     backgroundColor: '#EF4444',
   },
   toastText: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '500',
     flex: 1,

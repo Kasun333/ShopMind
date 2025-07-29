@@ -124,7 +124,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
                 focusedInput === 'username' && styles.inputFocused
               ]}
               placeholder="Enter your username"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor="#94A3B8"
               value={username}
               onChangeText={setUsername}
               onFocus={() => setFocusedInput('username')}
@@ -140,7 +140,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
                 focusedInput === 'password' && styles.inputFocused
               ]}
               placeholder="Enter your password"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor="#94A3B8"
               secureTextEntry
               value={password}
               onChangeText={setPassword}
@@ -171,7 +171,7 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -181,25 +181,25 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#F8FAFC',
     opacity: 0.95,
   },
   loginCard: {
     width: width * 0.9,
     maxWidth: 400,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 32,
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: {
       width: 0,
-      height: 20,
+      height: 10,
     },
-    shadowOpacity: 0.5,
-    shadowRadius: 40,
-    elevation: 25,
+    shadowOpacity: 0.08,
+    shadowRadius: 25,
+    elevation: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#E2E8F0',
   },
   header: {
     alignItems: 'center',
@@ -208,13 +208,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#64748B',
     fontWeight: '400',
   },
   form: {
@@ -226,31 +226,31 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#E5E7EB',
+    color: '#374151',
     marginLeft: 4,
   },
   input: {
     height: 56,
-    backgroundColor: '#111111',
+    backgroundColor: '#F8FAFC',
     borderWidth: 2,
-    borderColor: '#2A2A2A',
+    borderColor: '#E2E8F0',
     borderRadius: 16,
     paddingHorizontal: 20,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '500',
   },
   inputFocused: {
     borderColor: '#3B82F6',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#3B82F6',
     shadowOffset: {
       width: 0,
       height: 0,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 4,
   },
   loginButton: {
     height: 56,
@@ -262,11 +262,11 @@ const styles = StyleSheet.create({
     shadowColor: '#3B82F6',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
   loginButtonText: {
     color: '#FFFFFF',
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   forgotPasswordText: {
-    color: '#9CA3AF',
+    color: '#64748B',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -300,31 +300,31 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 60,
     right: 20,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     minWidth: 280,
     maxWidth: width * 0.9,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 10,
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: '#E2E8F0',
     zIndex: 1000,
   },
   toastSuccess: {
-    backgroundColor: '#065F46',
-    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+    borderColor: '#16A34A',
   },
   toastError: {
-    backgroundColor: '#7F1D1D',
+    backgroundColor: '#FEF2F2',
     borderColor: '#EF4444',
   },
   toastIndicator: {
@@ -334,13 +334,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   indicatorSuccess: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#16A34A',
   },
   indicatorError: {
     backgroundColor: '#EF4444',
   },
   toastText: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '500',
     flex: 1,

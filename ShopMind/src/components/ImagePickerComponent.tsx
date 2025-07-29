@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#E5E7EB',
+    color: '#374151',
     marginLeft: 4,
   },
   imageContainer: {
@@ -167,8 +167,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignSelf: 'center',
     borderWidth: 2,
-    borderColor: '#2A2A2A',
-    backgroundColor: '#111111',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
   },
   imageWrapper: {
     flex: 1,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
   },
   placeholderText: {
-    color: '#6B7280',
+    color: '#64748B',
     fontSize: 12,
     textAlign: 'center',
     fontWeight: '500',

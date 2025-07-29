@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import BottomNavigation from '../components/BottomNavigation';
+import MessagesScreen from './MessagesScreen';
+import CartScreen from './CartScreen';
+import AccountScreen from './AccountScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +20,8 @@ interface EcommerceScreenProps {
 }
 
 const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout }) => {
+  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'cart' | 'account'>('home');
+
   const categories = [
     { name: 'Electronics', icon: '📱' },
     { name: 'Clothing', icon: '👕' },
@@ -25,7 +31,25 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     { name: 'Food', icon: '🍔' },
   ];
 
-  return (
+  const handleTabPress = (tab: 'home' | 'messages' | 'cart' | 'account') => {
+    setActiveTab(tab);
+  };
+
+  // Render different screens based on active tab
+  const renderScreen = () => {
+    switch (activeTab) {
+      case 'messages':
+        return <MessagesScreen user={user} token={token} />;
+      case 'cart':
+        return <CartScreen user={user} token={token} />;
+      case 'account':
+        return <AccountScreen user={user} token={token} onLogout={onLogout} />;
+      default:
+        return renderHomeScreen();
+    }
+  };
+
+  const renderHomeScreen = () => (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>ShopMind</Text>
@@ -60,14 +84,20 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
           </View>
         </View>
 
-        <TouchableOpacity style={styles.cartButton}>
+        <TouchableOpacity 
+          style={styles.cartButton}
+          onPress={() => setActiveTab('cart')}
+        >
           <Text style={styles.cartButtonText}>🛒 View Cart (0)</Text>
         </TouchableOpacity>
       </ScrollView>
+    </View>
+  );
 
-      <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </TouchableOpacity>
+  return (
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
     </View>
   );
 };
@@ -75,24 +105,40 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
 export default EcommerceScreen;
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     padding: 20,
     paddingTop: 60,
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#64748B',
     fontWeight: '400',
   },
   content: {
@@ -103,15 +149,24 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   searchButton: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   searchText: {
-    color: '#6B7280',
+    color: '#94A3B8',
     fontSize: 16,
+    fontWeight: '500',
   },
   section: {
     marginBottom: 30,
@@ -119,7 +174,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 16,
   },
   categoriesGrid: {
@@ -128,39 +183,57 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   categoryCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     width: (width - 60) / 3,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   categoryIcon: {
     fontSize: 24,
     marginBottom: 8,
   },
   categoryName: {
-    color: '#FFFFFF',
+    color: '#374151',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
   },
   productCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   productPlaceholder: {
     height: 120,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   productName: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
@@ -172,24 +245,20 @@ const styles = StyleSheet.create({
   },
   cartButton: {
     backgroundColor: '#3B82F6',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     marginTop: 20,
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
   cartButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  logoutButton: {
-    backgroundColor: '#EF4444',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    margin: 20,
-  },
-  logoutButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
