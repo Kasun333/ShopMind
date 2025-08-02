@@ -182,7 +182,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       
       console.log('Signup request body:', JSON.stringify(requestBody, null, 2));
       
-      const response = await fetch('http://192.168.1.4:8080/api/auth/signup', {
+      const response = await fetch('http://192.168.1.5:8080/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

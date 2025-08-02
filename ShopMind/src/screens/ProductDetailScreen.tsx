@@ -9,9 +9,11 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Image,
 } from 'react-native';
 import { Product } from '../types/Product';
 import { User } from '../types/User';
+import { useCart } from '../hooks/useCart';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,7 +22,6 @@ interface ProductDetailScreenProps {
   user: User;
   token: string;
   onBack: () => void;
-  onAddToCart: (product: Product) => void;
 }
 
 const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
@@ -28,65 +29,186 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   user,
   token,
   onBack,
-  onAddToCart,
 }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [addToCartAnimation] = useState(new Animated.Value(1));
+  
+  // Use the cart hook
+  const { 
+    addToCart, 
+    isProductInCart, 
+    getProductQuantityInCart, 
+    getCartItemCount,
+    isLoading: cartLoading 
+  } = useCart();
 
-  const BASE_URL = 'http://192.168.1.4:8082';
+  const BASE_URL = 'http://192.168.1.5:8083';
+
+  // Test network connectivity
+  const testNetworkConnectivity = async () => {
+    try {
+      console.log('Testing basic network connectivity...');
+      const response = await fetch('https://httpbin.org/json', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+      });
+      console.log('Basic network test successful:', response.ok);
+      return response.ok;
+    } catch (error) {
+      console.log('Basic network test failed:', error);
+      return false;
+    }
+  };
 
   // Fetch product details
   const fetchProductDetails = async () => {
     setLoading(true);
+    const apiUrl = `${BASE_URL}/api/products/${productId}`;
+    
+    console.log('Fetching product details for ID:', productId);
+    console.log('API URL:', apiUrl);
+    
     try {
-      const response = await fetch(`${BASE_URL}/api/products/${productId}`);
+      // First, let's try with a more explicit fetch configuration
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      console.log('Response received');
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (response.ok) {
-        const data: Product = await response.json();
-        setProduct(data);
+        const responseText = await response.text();
+        console.log('Raw response text:', responseText);
+        
+        try {
+          const data: Product = JSON.parse(responseText);
+          console.log('Product data parsed:', data);
+          setProduct(data);
+        } catch (parseError) {
+          console.error('JSON parsing error:', parseError);
+          Alert.alert('Error', 'Invalid response format from server');
+        }
       } else {
-        Alert.alert('Error', 'Failed to fetch product details');
+        console.log('Response not ok. Status:', response.status, 'StatusText:', response.statusText);
+        const errorText = await response.text();
+        console.log('Error response body:', errorText);
+        Alert.alert('Error', `Failed to fetch product details (Status: ${response.status})`);
       }
     } catch (error) {
       console.error('Error fetching product details:', error);
-      Alert.alert('Error', 'Could not connect to server');
+      console.log('Error type:', typeof error);
+      console.log('Error name:', error instanceof Error ? error.name : 'Unknown');
+      console.log('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      
+      // More specific error handling
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          Alert.alert('Timeout Error', 'Request timed out. Please check your network connection.');
+        } else if (error.message === 'Network request failed') {
+          Alert.alert(
+            'Network Error', 
+            `Could not connect to server at ${BASE_URL}.\n\nTroubleshooting steps:\n1. Ensure server is running\n2. Check if you're using the correct IP address\n3. Try restarting the Metro bundler\n4. Check firewall settings`
+          );
+        } else {
+          Alert.alert('Error', `Connection failed: ${error.message}`);
+        }
+      } else {
+        Alert.alert('Error', 'Unknown error occurred');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProductDetails();
+    const initializeProductDetails = async () => {
+      // First test basic network connectivity
+      const networkOk = await testNetworkConnectivity();
+      if (!networkOk) {
+        console.log('Basic network connectivity failed');
+        Alert.alert(
+          'Network Issue', 
+          'Basic network connectivity test failed. Please check your internet connection.'
+        );
+        setLoading(false);
+        return;
+      }
+      
+      // If basic network is ok, try to fetch product details
+      await fetchProductDetails();
+    };
+    
+    initializeProductDetails();
   }, [productId]);
 
-  const handleAddToCart = () => {
-    if (product) {
-      // Add to cart animation
-      Animated.sequence([
-        Animated.timing(addToCartAnimation, {
-          toValue: 0.8,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(addToCartAnimation, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-      ]).start();
+  const handleAddToCart = async () => {
+    if (!product) return;
 
-      onAddToCart(product);
+    // Show loading animation
+    Animated.sequence([
+      Animated.timing(addToCartAnimation, {
+        toValue: 0.8,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(addToCartAnimation, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Add to cart using the cart service
+    const result = await addToCart(product, quantity);
+
+    if (result.success) {
+      // Show success message
       Alert.alert(
-        'Added to Cart',
-        `${quantity} ${product.name}(s) added to your cart!`,
-        [{ text: 'OK', style: 'default' }]
+        '🛒 Added to Cart!',
+        result.message,
+        [
+          { 
+            text: 'Continue Shopping', 
+            style: 'default' 
+          },
+          { 
+            text: 'View Cart', 
+            style: 'default',
+            onPress: () => {
+              // You can navigate to cart here if needed
+              console.log('Navigate to cart');
+            }
+          }
+        ]
       );
+    } else {
+      // Show error message
+      Alert.alert('❌ Cannot Add to Cart', result.message);
     }
   };
 
   const increaseQuantity = () => {
-    setQuantity(prev => prev + 1);
+    if (product && quantity < product.stock) {
+      setQuantity(prev => prev + 1);
+    } else if (product) {
+      Alert.alert('Stock Limit', `Only ${product.stock} items available.`);
+    }
   };
 
   const decreaseQuantity = () => {
@@ -103,6 +225,7 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   }
 
   if (!product) {
+    console.log('Product is null, showing error container');
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorIcon}>😞</Text>
@@ -115,6 +238,15 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     );
   }
 
+  console.log('Rendering product details for:', product.name);
+  console.log('Product details:', {
+    name: product.name,
+    price: product.price,
+    description: product.description,
+    stock: product.stock,
+    imageUrl: product.imageUrl
+  });
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -123,66 +255,161 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           <Text style={styles.backIconText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
-        <View style={styles.placeholder} />
+        <View style={styles.cartBadgeContainer}>
+          {getCartItemCount() > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{getCartItemCount()}</Text>
+            </View>
+          )}
+          <Text style={styles.cartIcon}>🛒</Text>
+        </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Product Image */}
         <View style={styles.imageContainer}>
-          <View style={styles.productImage}>
-            <Text style={styles.productImageIcon}>📸</Text>
-          </View>
+          {product.imageUrl ? (
+            <Image
+              source={{ uri: product.imageUrl }}
+              style={styles.productImage}
+              resizeMode="cover"
+              onError={() => console.log('Failed to load product image:', product.imageUrl)}
+            />
+          ) : (
+            <View style={styles.productImagePlaceholder}>
+              <Text style={styles.productImageIcon}>📸</Text>
+              <Text style={styles.noImageText}>No Image Available</Text>
+            </View>
+          )}
+          {product.stock === 0 && (
+            <View style={styles.outOfStockOverlay}>
+              <Text style={styles.outOfStockBadge}>OUT OF STOCK</Text>
+            </View>
+          )}
         </View>
 
         {/* Product Info */}
         <View style={styles.productInfo}>
-          <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>${product.price.toFixed(2)}</Text>
+          {/* Product Header with Price Badge */}
+          <View style={styles.productHeader}>
+            <View style={styles.productNameContainer}>
+              <Text style={styles.productName}>{product.name}</Text>
+              <View style={styles.priceBadge}>
+                <Text style={styles.productPrice}>${product.price.toFixed(2)}</Text>
+              </View>
+            </View>
+          </View>
           
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.productDescription}>{product.description}</Text>
+          {/* Quick Info Cards */}
+          <View style={styles.quickInfoContainer}>
+            <View style={styles.quickInfoCard}>
+              <Text style={styles.quickInfoIcon}>🏷️</Text>
+              <Text style={styles.quickInfoLabel}>Product ID</Text>
+              <Text style={styles.quickInfoValue}>#{product.productId}</Text>
+            </View>
+            <View style={styles.quickInfoCard}>
+              <Text style={styles.quickInfoIcon}>📦</Text>
+              <Text style={styles.quickInfoLabel}>Stock</Text>
+              <Text style={[styles.quickInfoValue, product.stock === 0 ? styles.stockEmpty : styles.stockAvailable]}>
+                {product.stock === 0 ? 'Out' : product.stock}
+              </Text>
+            </View>
+            <View style={styles.quickInfoCard}>
+              <Text style={styles.quickInfoIcon}>📂</Text>
+              <Text style={styles.quickInfoLabel}>Category</Text>
+              <Text style={styles.quickInfoValue}>#{product.categoryId}</Text>
+            </View>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Product Details</Text>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Product ID:</Text>
-              <Text style={styles.detailValue}>{product.productId}</Text>
+            <Text style={styles.sectionTitle}>📝 Description</Text>
+            <View style={styles.descriptionCard}>
+              <Text style={styles.productDescription}>
+                {product.description || 'No description available for this product.'}
+              </Text>
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Category ID:</Text>
-              <Text style={styles.detailValue}>{product.categoryId}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📋 Product Details</Text>
+            <View style={styles.detailsCard}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>🆔 Product ID:</Text>
+                <Text style={styles.detailValue}>{product.productId}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>📁 Category ID:</Text>
+                <Text style={styles.detailValue}>{product.categoryId}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>💰 Unit Price:</Text>
+                <Text style={styles.detailValue}>${product.price.toFixed(2)}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>📦 Availability:</Text>
+                <Text style={[styles.detailValue, product.stock === 0 ? styles.stockEmpty : styles.stockAvailable]}>
+                  {product.stock === 0 ? 'Out of Stock' : `${product.stock} items available`}
+                </Text>
+              </View>
             </View>
           </View>
 
           {/* Quantity Selector */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quantity</Text>
-            <View style={styles.quantityContainer}>
-              <TouchableOpacity style={styles.quantityButton} onPress={decreaseQuantity}>
-                <Text style={styles.quantityButtonText}>-</Text>
-              </TouchableOpacity>
-              <Text style={styles.quantityText}>{quantity}</Text>
-              <TouchableOpacity style={styles.quantityButton} onPress={increaseQuantity}>
-                <Text style={styles.quantityButtonText}>+</Text>
-              </TouchableOpacity>
+          {product.stock > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🔢 Quantity</Text>
+              <View style={styles.quantityCard}>
+                <View style={styles.quantityContainer}>
+                  <TouchableOpacity style={styles.quantityButton} onPress={decreaseQuantity}>
+                    <Text style={styles.quantityButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.quantityText}>{quantity}</Text>
+                  <TouchableOpacity style={styles.quantityButton} onPress={increaseQuantity}>
+                    <Text style={styles.quantityButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.quantityHelper}>Max: {product.stock} items</Text>
+                {isProductInCart(product.productId) && (
+                  <Text style={styles.inCartNotice}>
+                    📦 {getProductQuantityInCart(product.productId)} already in cart
+                  </Text>
+                )}
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Total Price */}
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>Total:</Text>
-            <Text style={styles.totalPrice}>${(product.price * quantity).toFixed(2)}</Text>
-          </View>
+          {product.stock > 0 && (
+            <View style={styles.totalContainer}>
+              <View style={styles.totalContent}>
+                <Text style={styles.totalLabel}>💸 Total Amount:</Text>
+                <Text style={styles.totalPrice}>${(product.price * quantity).toFixed(2)}</Text>
+              </View>
+              <Text style={styles.totalHelper}>{quantity} × ${product.price.toFixed(2)} per item</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
       {/* Bottom Action Buttons */}
       <View style={styles.bottomActions}>
         <Animated.View style={[styles.addToCartContainer, { transform: [{ scale: addToCartAnimation }] }]}>
-          <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}>
-            <Text style={styles.addToCartButtonText}>🛒 Add to Cart</Text>
+          <TouchableOpacity 
+            style={[
+              styles.addToCartButton, 
+              (product.stock === 0 || cartLoading) && styles.addToCartButtonDisabled
+            ]} 
+            onPress={handleAddToCart}
+            disabled={product.stock === 0 || cartLoading}
+          >
+            <Text style={[
+              styles.addToCartButtonText, 
+              (product.stock === 0 || cartLoading) && styles.addToCartButtonTextDisabled
+            ]}>
+              {cartLoading ? '⏳ Adding...' : 
+               product.stock === 0 ? '❌ Out of Stock' : 
+               isProductInCart(product.productId) ? '🛒 Add More to Cart' : '🛒 Add to Cart'}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -273,6 +500,31 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
+  cartBadgeContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cartIcon: {
+    fontSize: 24,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  cartBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   content: {
     flex: 1,
   },
@@ -291,6 +543,10 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   productImage: {
+    width: '100%',
+    height: 280,
+  },
+  productImagePlaceholder: {
     height: 280,
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
@@ -300,21 +556,47 @@ const styles = StyleSheet.create({
     fontSize: 80,
     color: '#94A3B8',
   },
+  noImageText: {
+    fontSize: 16,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginTop: 8,
+  },
+  outOfStockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  outOfStockBadge: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
   productInfo: {
     padding: 20,
   },
   productName: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 8,
-    lineHeight: 36,
+    lineHeight: 32,
+    flex: 1,
   },
   productPrice: {
-    fontSize: 32,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#3B82F6',
-    marginBottom: 24,
+    color: '#FFFFFF',
   },
   section: {
     marginBottom: 24,
@@ -347,6 +629,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     fontWeight: '600',
+  },
+  stockEmpty: {
+    color: '#DC2626',
+  },
+  stockAvailable: {
+    color: '#16A34A',
   },
   quantityContainer: {
     flexDirection: 'row',
@@ -386,9 +674,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     padding: 20,
     borderRadius: 16,
@@ -441,6 +726,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  addToCartButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  addToCartButtonTextDisabled: {
+    color: '#FFFFFF',
+  },
   backButton: {
     backgroundColor: '#3B82F6',
     borderRadius: 16,
@@ -452,5 +743,124 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // New styles for enhanced product details
+  productHeader: {
+    marginBottom: 20,
+  },
+  productNameContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  priceBadge: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginLeft: 12,
+  },
+  quickInfoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    gap: 12,
+  },
+  quickInfoCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  quickInfoIcon: {
+    fontSize: 20,
+    marginBottom: 8,
+  },
+  quickInfoLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  quickInfoValue: {
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  descriptionCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  detailsCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  quantityCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    alignItems: 'center',
+  },
+  quantityHelper: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  inCartNotice: {
+    fontSize: 12,
+    color: '#16A34A',
+    marginTop: 4,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  totalContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  totalHelper: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
   },
 });

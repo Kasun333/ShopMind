@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
+import { useCart } from '../hooks/useCart';
 
 const { width } = Dimensions.get('window');
 
@@ -15,49 +16,29 @@ interface CartScreenProps {
 }
 
 const CartScreen: React.FC<CartScreenProps> = ({ user, token }) => {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: '1',
-      name: 'Wireless Headphones',
-      price: 99.99,
-      quantity: 1,
-      image: '🎧',
-      store: 'Electronics Hub',
-    },
-    {
-      id: '2',
-      name: 'Cotton T-Shirt',
-      price: 24.99,
-      quantity: 2,
-      image: '👕',
-      store: 'Fashion Store',
-    },
-    {
-      id: '3',
-      name: 'Coffee Mug',
-      price: 12.99,
-      quantity: 1,
-      image: '☕',
-      store: 'Home & Kitchen',
-    },
-  ]);
+  // Use the cart hook instead of hardcoded items
+  const { 
+    cartItems, 
+    cartSummary, 
+    updateQuantity, 
+    removeFromCart, 
+    clearCart 
+  } = useCart();
 
-  const updateQuantity = (id: string, change: number) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.max(0, item.quantity + change) }
-          : item
-      ).filter(item => item.quantity > 0)
-    );
+  const handleQuantityUpdate = async (itemId: string, newQuantity: number) => {
+    try {
+      await updateQuantity(itemId, newQuantity);
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+    }
   };
 
-  const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-  };
-
-  const getItemCount = () => {
-    return cartItems.reduce((count, item) => count + item.quantity, 0);
+  const handleClearCart = async () => {
+    try {
+      await clearCart();
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+    }
   };
 
   return (
@@ -65,7 +46,7 @@ const CartScreen: React.FC<CartScreenProps> = ({ user, token }) => {
       <View style={styles.header}>
         <Text style={styles.title}>Shopping Cart</Text>
         <Text style={styles.subtitle}>
-          {getItemCount()} {getItemCount() === 1 ? 'item' : 'items'} in your cart
+          {cartSummary.itemCount} {cartSummary.itemCount === 1 ? 'item' : 'items'} in your cart
         </Text>
       </View>
 
@@ -85,26 +66,34 @@ const CartScreen: React.FC<CartScreenProps> = ({ user, token }) => {
               {cartItems.map((item) => (
                 <View key={item.id} style={styles.cartItem}>
                   <View style={styles.itemImage}>
-                    <Text style={styles.itemImageIcon}>{item.image}</Text>
+                    {item.imageUrl ? (
+                      <Image 
+                        source={{ uri: item.imageUrl }} 
+                        style={styles.itemImagePhoto}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={styles.itemImageIcon}>📦</Text>
+                    )}
                   </View>
                   
                   <View style={styles.itemDetails}>
                     <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemStore}>{item.store}</Text>
+                    <Text style={styles.itemStore}>Category #{item.categoryId}</Text>
                     <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
                   </View>
                   
                   <View style={styles.quantityControls}>
                     <TouchableOpacity
                       style={styles.quantityButton}
-                      onPress={() => updateQuantity(item.id, -1)}
+                      onPress={() => handleQuantityUpdate(item.id, item.quantity - 1)}
                     >
                       <Text style={styles.quantityButtonText}>−</Text>
                     </TouchableOpacity>
                     <Text style={styles.quantity}>{item.quantity}</Text>
                     <TouchableOpacity
                       style={styles.quantityButton}
-                      onPress={() => updateQuantity(item.id, 1)}
+                      onPress={() => handleQuantityUpdate(item.id, item.quantity + 1)}
                     >
                       <Text style={styles.quantityButtonText}>+</Text>
                     </TouchableOpacity>
@@ -118,32 +107,41 @@ const CartScreen: React.FC<CartScreenProps> = ({ user, token }) => {
               
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Subtotal</Text>
-                <Text style={styles.summaryValue}>${getTotalPrice().toFixed(2)}</Text>
+                <Text style={styles.summaryValue}>${cartSummary.subtotal.toFixed(2)}</Text>
               </View>
               
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Shipping</Text>
-                <Text style={styles.summaryValue}>$5.99</Text>
+                <Text style={styles.summaryValue}>${cartSummary.shipping.toFixed(2)}</Text>
               </View>
               
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Tax</Text>
-                <Text style={styles.summaryValue}>${(getTotalPrice() * 0.08).toFixed(2)}</Text>
+                <Text style={styles.summaryValue}>${cartSummary.tax.toFixed(2)}</Text>
               </View>
               
               <View style={[styles.summaryRow, styles.totalRow]}>
                 <Text style={styles.totalLabel}>Total</Text>
                 <Text style={styles.totalValue}>
-                  ${(getTotalPrice() + 5.99 + (getTotalPrice() * 0.08)).toFixed(2)}
+                  ${cartSummary.total.toFixed(2)}
                 </Text>
               </View>
             </View>
 
             <TouchableOpacity style={styles.checkoutButton}>
               <Text style={styles.checkoutButtonText}>
-                Proceed to Checkout • ${(getTotalPrice() + 5.99 + (getTotalPrice() * 0.08)).toFixed(2)}
+                Proceed to Checkout • ${cartSummary.total.toFixed(2)}
               </Text>
             </TouchableOpacity>
+
+            {cartItems.length > 0 && (
+              <TouchableOpacity 
+                style={styles.clearCartButton}
+                onPress={handleClearCart}
+              >
+                <Text style={styles.clearCartButtonText}>🗑️ Clear Cart</Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
       </ScrollView>
@@ -381,6 +379,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  itemImagePhoto: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+  clearCartButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  clearCartButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

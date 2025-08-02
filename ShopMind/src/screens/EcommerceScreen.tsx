@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, FlatList, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, FlatList, TextInput, Alert, Image } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
 import MessagesScreen from './MessagesScreen';
 import CartScreen from './CartScreen';
@@ -35,7 +35,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     { id: 6, name: 'Food', icon: '🍔' },
   ];
 
-  const BASE_URL = 'http://192.168.1.4:8082';
+  const BASE_URL = 'http://192.168.1.5:8083';
 
   // Fetch all products
   const fetchProducts = async () => {
@@ -259,22 +259,50 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
       onPress={() => onProductPress(product.productId)}
       activeOpacity={0.7}
     >
-      <View style={styles.productImagePlaceholder}>
-        <Text style={styles.productImageIcon}>📸</Text>
+      <View style={styles.productImageContainer}>
+        {product.imageUrl ? (
+          <Image
+            source={{ uri: product.imageUrl }}
+            style={styles.productImage}
+            resizeMode="cover"
+            onError={() => console.log('Failed to load image:', product.imageUrl)}
+          />
+        ) : (
+          <View style={styles.productImagePlaceholder}>
+            <Text style={styles.productImageIcon}>📸</Text>
+          </View>
+        )}
+        {product.stock === 0 && (
+          <View style={styles.outOfStockOverlay}>
+            <Text style={styles.outOfStockText}>Out of Stock</Text>
+          </View>
+        )}
       </View>
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
         <Text style={styles.productDescription} numberOfLines={2}>{product.description}</Text>
+        <View style={styles.stockContainer}>
+          <Text style={[styles.stockText, product.stock === 0 && styles.stockTextEmpty]}>
+            {product.stock === 0 ? 'Out of Stock' : `${product.stock} in stock`}
+          </Text>
+        </View>
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>${product.price.toFixed(2)}</Text>
           <TouchableOpacity 
-            style={styles.addToCartButton}
+            style={[styles.addToCartButton, product.stock === 0 && styles.addToCartButtonDisabled]}
             onPress={(e) => {
               e.stopPropagation(); // Prevent triggering the card press
-              onAddToCart(product);
+              if (product.stock > 0) {
+                onAddToCart(product);
+              } else {
+                Alert.alert('Out of Stock', 'This product is currently unavailable.');
+              }
             }}
+            disabled={product.stock === 0}
           >
-            <Text style={styles.addToCartText}>+</Text>
+            <Text style={[styles.addToCartText, product.stock === 0 && styles.addToCartTextDisabled]}>
+              {product.stock === 0 ? '✗' : '+'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -476,6 +504,15 @@ const styles = StyleSheet.create({
     width: (width - 52) / 2,
     overflow: 'hidden',
   },
+  productImageContainer: {
+    height: 120,
+    position: 'relative',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F8FAFC',
+  },
   productImagePlaceholder: {
     height: 120,
     backgroundColor: '#F8FAFC',
@@ -487,6 +524,22 @@ const styles = StyleSheet.create({
   productImageIcon: {
     fontSize: 32,
     color: '#94A3B8',
+  },
+  outOfStockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  outOfStockText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   productInfo: {
     padding: 12,
@@ -501,8 +554,25 @@ const styles = StyleSheet.create({
   productDescription: {
     fontSize: 12,
     color: '#64748B',
-    marginBottom: 12,
+    marginBottom: 8,
     lineHeight: 16,
+  },
+  stockContainer: {
+    marginBottom: 8,
+  },
+  stockText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#16A34A',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  stockTextEmpty: {
+    color: '#DC2626',
+    backgroundColor: '#FEF2F2',
   },
   productFooter: {
     flexDirection: 'row',
@@ -522,10 +592,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  addToCartButtonDisabled: {
+    backgroundColor: '#94A3B8',
+  },
   addToCartText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  addToCartTextDisabled: {
+    color: '#FFFFFF',
+    fontSize: 12,
   },
   floatingCartButton: {
     position: 'absolute',
