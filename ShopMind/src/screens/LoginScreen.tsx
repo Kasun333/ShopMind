@@ -45,7 +45,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
     }
 
     try {
-      const response = await fetch('http://10.79.191.210:8080/api/auth/login', {
+      const response = await fetch('http://192.168.1.4:8080/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
