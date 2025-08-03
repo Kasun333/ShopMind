@@ -13,9 +13,10 @@ interface CartScreenProps {
     role: string;
   };
   token: string;
+  onNavigateToCheckout?: () => void;
 }
 
-const CartScreen: React.FC<CartScreenProps> = ({ user, token }) => {
+const CartScreen: React.FC<CartScreenProps> = ({ user, token, onNavigateToCheckout }) => {
   // Use the cart hook instead of hardcoded items
   const { 
     cartItems, 
@@ -128,7 +129,10 @@ const CartScreen: React.FC<CartScreenProps> = ({ user, token }) => {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.checkoutButton}>
+            <TouchableOpacity 
+              style={styles.checkoutButton}
+              onPress={onNavigateToCheckout}
+            >
               <Text style={styles.checkoutButtonText}>
                 Proceed to Checkout • ${cartSummary.total.toFixed(2)}
               </Text>

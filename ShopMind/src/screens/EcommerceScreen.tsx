@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, FlatList, TextInput, Alert, Image } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
 import MessagesScreen from './MessagesScreen';
-import CartScreen from './CartScreen';
+import CartNavigation from '../navigation/CartNavigation';
 import AccountScreen from './AccountScreen';
 import ProductDetailScreen from './ProductDetailScreen';
 import { User } from '../types/User';
@@ -123,7 +123,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
       case 'messages':
         return <MessagesScreen user={user} token={token} />;
       case 'cart':
-        return <CartScreen user={user} token={token} />;
+        return <CartNavigation user={user} token={token} />;
       case 'account':
         return <AccountScreen user={user} token={token} onLogout={onLogout} />;
       default:
