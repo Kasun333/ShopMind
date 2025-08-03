@@ -19,7 +19,7 @@ export const initializeStripe = async () => {
 
 export interface PaymentIntent {
   id: string;
-  client_secret: string;
+  clientSecret: string;
   amount: number;
   currency: string;
   status: string;
@@ -28,9 +28,9 @@ export interface PaymentIntent {
 export interface CreatePaymentIntentRequest {
   amount: number; // in cents
   currency: string;
-  customer_id: number;
+  customerId: number;
   items: Array<{
-    product_id: number;
+    productId: number;
     quantity: number;
     price: number;
   }>;
@@ -38,8 +38,8 @@ export interface CreatePaymentIntentRequest {
 
 export interface CreatePaymentIntentResponse {
   success: boolean;
-  payment_intent?: PaymentIntent;
-  order_id?: number;
+  paymentIntent?: PaymentIntent;
+  orderId?: number;
   message?: string;
   error?: string;
 }
@@ -47,7 +47,7 @@ export interface CreatePaymentIntentResponse {
 export class StripeService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://192.168.1.5:8083') {
+  constructor(baseUrl: string = 'http://192.168.1.5:8084') {
     this.baseUrl = baseUrl;
   }
 
@@ -80,8 +80,8 @@ export class StripeService {
       
       return {
         success: true,
-        payment_intent: data.payment_intent,
-        order_id: data.order_id,
+        paymentIntent: data.paymentIntent,
+        orderId: data.orderId,
         message: data.message,
       };
     } catch (error) {
@@ -108,9 +108,9 @@ export class StripeService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          order_id: orderId,
-          payment_intent_id: paymentIntentId,
-          payment_method_id: paymentMethodId,
+          orderId: orderId,
+          paymentIntentId: paymentIntentId,
+          paymentMethodId: paymentMethodId,
         }),
       });
 

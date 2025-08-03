@@ -58,9 +58,9 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       const paymentRequest: CreatePaymentIntentRequest = {
         amount: Math.round(cartSummary.total * 100), // Convert to cents
         currency: 'usd',
-        customer_id: parseInt(user.id),
+        customerId: parseInt(user.id),
         items: cartItems.map(item => ({
-          product_id: item.productId,
+          productId: item.productId,
           quantity: item.quantity,
           price: item.price,
         })),
@@ -70,7 +70,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
       const paymentIntentResult = await stripeService.createPaymentIntent(paymentRequest);
 
-      if (!paymentIntentResult.success || !paymentIntentResult.payment_intent) {
+      if (!paymentIntentResult.success || !paymentIntentResult.paymentIntent) {
         Alert.alert(
           'Payment Error',
           paymentIntentResult.error || 'Failed to create payment intent'
@@ -78,13 +78,13 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         return;
       }
 
-      const { payment_intent, order_id } = paymentIntentResult;
-      setCurrentOrderId(order_id || null);
+      const { paymentIntent, orderId } = paymentIntentResult;
+      setCurrentOrderId(orderId || null);
 
-      console.log('Payment intent created:', payment_intent);
+      console.log('Payment intent created:', paymentIntent);
 
       // Step 2: Confirm payment with Stripe
-      const { error, paymentIntent } = await confirmPayment(payment_intent.client_secret, {
+      const { error, paymentIntent: confirmedPaymentIntent } = await confirmPayment(paymentIntent.clientSecret, {
         paymentMethodType: 'Card',
       });
 
@@ -97,15 +97,15 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         return;
       }
 
-      if (paymentIntent?.status === 'Succeeded') {
-        console.log('Payment succeeded:', paymentIntent);
+      if (confirmedPaymentIntent?.status === 'Succeeded') {
+        console.log('Payment succeeded:', confirmedPaymentIntent);
 
         // Step 3: Confirm payment on backend (update order status, create invoice, etc.)
-        if (order_id && paymentIntent.id && paymentIntent.paymentMethodId) {
+        if (orderId && confirmedPaymentIntent.id && confirmedPaymentIntent.paymentMethodId) {
           const confirmResult = await stripeService.confirmPayment(
-            order_id,
-            paymentIntent.id,
-            paymentIntent.paymentMethodId
+            orderId,
+            confirmedPaymentIntent.id,
+            confirmedPaymentIntent.paymentMethodId
           );
 
           if (confirmResult.success) {
