@@ -44,7 +44,7 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     isLoading: cartLoading 
   } = useCart();
 
-  const BASE_URL = 'http://192.168.1.5:8083';
+  const BASE_URL = 'http://10.10.31.7:8083';
 
   // Test network connectivity
   const testNetworkConnectivity = async () => {
