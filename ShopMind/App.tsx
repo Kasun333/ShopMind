@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { SafeAreaView, StatusBar, StyleSheet } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
@@ -54,40 +55,56 @@ export default function App() {
   if (!user || !token) {
     if (showSignup) {
       return (
-        <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
-          <SignupScreen 
-            onSignupSuccess={handleSignupSuccess}
-            onBackToLogin={handleBackToLogin}
-          />
-        </StripeProvider>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+          <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+            <SignupScreen 
+              onSignupSuccess={handleSignupSuccess}
+              onBackToLogin={handleBackToLogin}
+            />
+          </StripeProvider>
+        </SafeAreaView>
       );
     }
     return (
-      <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
-        <LoginScreen 
-          onLogin={handleLogin} 
-          onShowSignup={handleShowSignup}
-        />
-      </StripeProvider>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+          <LoginScreen 
+            onLogin={handleLogin} 
+            onShowSignup={handleShowSignup}
+          />
+        </StripeProvider>
+      </SafeAreaView>
     );
   }
 
   // Navigate based on user role
   return (
-    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
-      {(() => {
-        switch (user.role) {
-          case 'Driver':
-            return <DriverScreen user={user} token={token} onLogout={handleLogout} />;
-          case 'User':
-            return <EcommerceScreen user={user} token={token} onLogout={handleLogout} />;
-          case 'Store Keeper':
-            return <StoreKeeperScreen user={user} token={token} onLogout={handleLogout} />;
-          default:
-            // Default to ecommerce screen for unknown roles
-            return <EcommerceScreen user={user} token={token} onLogout={handleLogout} />;
-        }
-      })()}
-    </StripeProvider>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+        {(() => {
+          switch (user.role) {
+            case 'Driver':
+              return <DriverScreen user={user} token={token} onLogout={handleLogout} />;
+            case 'User':
+              return <EcommerceScreen user={user} token={token} onLogout={handleLogout} />;
+            case 'Store Keeper':
+              return <StoreKeeperScreen user={user} token={token} onLogout={handleLogout} />;
+            default:
+              // Default to ecommerce screen for unknown roles
+              return <EcommerceScreen user={user} token={token} onLogout={handleLogout} />;
+          }
+        })()}
+      </StripeProvider>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+});

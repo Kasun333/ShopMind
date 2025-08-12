@@ -7,15 +7,15 @@ import {
   Dimensions,
   RefreshControl,
   Alert,
-  Modal,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import { Order, OrderFilters } from '../../types/Order';
 import { User } from '../../types/User';
 import OrderCard from '../../components/storekeeper/OrderCard';
 import OrderFilter from '../../components/storekeeper/OrderFilter';
+import ProcessOrderScreen from './ProcessOrderScreen';
 import { orderService } from '../../services/orderService';
 
 const { width } = Dimensions.get('window');
@@ -32,7 +32,7 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState<OrderFilters>({});
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [showProcessOrder, setShowProcessOrder] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -122,29 +122,16 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
     setFilteredOrders(filtered);
   };
 
-  const handleStatusChange = (orderId: number, newStatus: Order['status']) => {
-    Alert.alert(
-      'Update Order Status',
-      `Are you sure you want to mark this order as ${newStatus}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Update',
-          onPress: () => {
-            setOrders(prevOrders =>
-              prevOrders.map(order =>
-                order.orderId === orderId ? { ...order, status: newStatus as any } : order
-              )
-            );
-          },
-        },
-      ]
-    );
+  const handleProcessOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setShowProcessOrder(true);
   };
 
-  const handleOrderPress = (order: Order) => {
-    setSelectedOrder(order);
-    setShowOrderDetails(true);
+  const handleBackFromProcess = () => {
+    setShowProcessOrder(false);
+    setSelectedOrder(null);
+    // Refresh orders to get updated status
+    loadOrders();
   };
 
   const onRefresh = () => {
@@ -155,8 +142,8 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
   const renderOrderItem = ({ item }: { item: Order }) => (
     <OrderCard
       order={item}
-      onPress={handleOrderPress}
-      onStatusChange={handleStatusChange}
+      onPress={handleProcessOrder}
+      onProcessOrder={handleProcessOrder}
     />
   );
 
@@ -172,127 +159,47 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
     </View>
   );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Manage Orders</Text>
-        <Text style={styles.subtitle}>
-          {filteredOrders.length} of {orders.length} orders
-        </Text>
-      </View>
-
-      {/* Filters */}
-      <OrderFilter filters={filters} onFiltersChange={setFilters} />
-
-      {/* Orders List */}
-      <FlatList
-        data={filteredOrders}
-        renderItem={renderOrderItem}
-        keyExtractor={(item) => item.orderId.toString()}
-        style={styles.list}
-        contentContainerStyle={filteredOrders.length === 0 ? styles.emptyListContainer : undefined}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={renderEmptyList}
-      />
-
-      {/* Order Details Modal */}
-      <Modal
-        visible={showOrderDetails}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowOrderDetails(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Order Details</Text>
-              <TouchableOpacity onPress={() => setShowOrderDetails(false)}>
-                <Text style={styles.closeButton}>✕</Text>
-              </TouchableOpacity>
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      {showProcessOrder && selectedOrder ? (
+        <ProcessOrderScreen
+          user={user}
+          token={token}
+          order={selectedOrder}
+          onBack={handleBackFromProcess}
+        />
+      ) : (
+        <SafeAreaView style={styles.container}>
+          <View style={styles.content}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Manage Orders</Text>
+              <Text style={styles.subtitle}>
+                {filteredOrders.length} of {orders.length} orders
+              </Text>
             </View>
 
-            {selectedOrder && (
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                {/* Order Info */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Order Information</Text>
-                  <Text style={styles.orderNumber}>#ORD-{selectedOrder.orderId}</Text>
-                  <Text style={styles.orderDate}>Placed: {formatDate(selectedOrder.orderDate)}</Text>
-                  {selectedOrder.deliveryDate && (
-                    <Text style={styles.orderDate}>Delivered: {formatDate(selectedOrder.deliveryDate)}</Text>
-                  )}
-                </View>
+            {/* Filters */}
+            <OrderFilter filters={filters} onFiltersChange={setFilters} />
 
-                {/* Customer Info */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Customer Information</Text>
-                  <Text style={styles.customerInfo}>{selectedOrder.customerName || `Customer ${selectedOrder.customerId}`}</Text>
-                  <Text style={styles.customerInfo}>{selectedOrder.customerPhone || 'Phone not available'}</Text>
-                  <Text style={styles.customerInfo}>{selectedOrder.customerEmail || 'Email not available'}</Text>
-                  <Text style={styles.customerInfo}>{selectedOrder.customerAddress || 'Address not available'}</Text>
-                </View>
-
-                {/* Items */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Order Items</Text>
-                  {selectedOrder.orderItems.map((item) => (
-                    <View key={item.orderItemId} style={styles.itemContainer}>
-                      <View style={styles.itemInfo}>
-                        <Text style={styles.itemName}>{item.productName}</Text>
-                        <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
-                      </View>
-                      <Text style={styles.itemPrice}>${(item.price * item.quantity).toFixed(2)}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Payment Summary */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Payment Summary</Text>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Subtotal:</Text>
-                    <Text style={styles.summaryValue}>${(selectedOrder.totalAmount * 0.9).toFixed(2)}</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Delivery Fee:</Text>
-                    <Text style={styles.summaryValue}>${(selectedOrder.totalAmount * 0.1).toFixed(2)}</Text>
-                  </View>
-                  <View style={[styles.summaryRow, styles.totalRow]}>
-                    <Text style={styles.totalLabel}>Total:</Text>
-                    <Text style={styles.totalValue}>${selectedOrder.totalAmount.toFixed(2)}</Text>
-                  </View>
-                  <Text style={styles.paymentMethod}>
-                    Payment: {selectedOrder.paymentMethod || 'card'} ({selectedOrder.paymentStatus || 'paid'})
-                  </Text>
-                </View>
-
-                {/* Notes */}
-                {selectedOrder.notes && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Special Notes</Text>
-                    <Text style={styles.notes}>{selectedOrder.notes}</Text>
-                  </View>
-                )}
-              </ScrollView>
-            )}
+            {/* Orders List */}
+            <FlatList
+              data={filteredOrders}
+              renderItem={renderOrderItem}
+              keyExtractor={(item) => item.orderId.toString()}
+              style={styles.list}
+              contentContainerStyle={filteredOrders.length === 0 ? styles.emptyListContainer : undefined}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
+              ListEmptyComponent={renderEmptyList}
+            />
           </View>
-        </View>
-      </Modal>
-    </View>
+        </SafeAreaView>
+      )}
+    </>
   );
 };
 
@@ -300,6 +207,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  content: {
+    flex: 1,
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -345,136 +255,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 24,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  closeButton: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  modalBody: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  orderNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
-  },
-  orderDate: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  customerInfo: {
-    fontSize: 16,
-    color: '#374151',
-    marginBottom: 4,
-  },
-  itemContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  itemInfo: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 2,
-  },
-  itemQuantity: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  itemPrice: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#059669',
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  summaryLabel: {
-    fontSize: 16,
-    color: '#64748B',
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    paddingTop: 8,
-    marginTop: 8,
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#059669',
-  },
-  paymentMethod: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  notes: {
-    fontSize: 16,
-    color: '#374151',
-    fontStyle: 'italic',
-    backgroundColor: '#F8FAFC',
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
   },
 });
 
