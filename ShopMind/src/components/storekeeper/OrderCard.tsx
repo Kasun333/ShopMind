@@ -13,10 +13,10 @@ const { width } = Dimensions.get('window');
 interface OrderCardProps {
   order: Order;
   onPress: (order: Order) => void;
-  onStatusChange: (orderId: number, status: Order['status']) => void;
+  onProcessOrder: (order: Order) => void;
 }
 
-const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onStatusChange }) => {
+const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onProcessOrder }) => {
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'PENDING': return '#F59E0B';
@@ -59,18 +59,6 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onStatusChange })
       minute: '2-digit',
     });
   };
-
-  const getNextStatus = (currentStatus: Order['status']): Order['status'] | null => {
-    switch (currentStatus) {
-      case 'PENDING': return 'CONFIRMED';
-      case 'CONFIRMED': return 'PREPARING';
-      case 'PREPARING': return 'READY';
-      case 'READY': return 'DELIVERED';
-      default: return null;
-    }
-  };
-
-  const nextStatus = getNextStatus(order.status);
 
   return (
     <TouchableOpacity style={styles.container} onPress={() => onPress(order)}>
@@ -131,17 +119,17 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onStatusChange })
         )}
       </View>
 
-      {/* Action Button */}
-      {nextStatus && order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+      {/* Process Order Button */}
+      {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: getStatusColor(nextStatus) }]}
+          style={[styles.actionButton, { backgroundColor: '#3B82F6' }]}
           onPress={(e) => {
             e.stopPropagation();
-            onStatusChange(order.orderId, nextStatus);
+            onProcessOrder(order);
           }}
         >
           <Text style={styles.actionButtonText}>
-            Mark as {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}
+            📋 Process Order
           </Text>
         </TouchableOpacity>
       )}
