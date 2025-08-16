@@ -119,8 +119,8 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onProcessOrder })
         )}
       </View>
 
-      {/* Process Order Button */}
-      {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+      {/* Process Order Button: Only show for non-processed, non-delivered, non-cancelled orders */}
+      {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && order.status !== 'PROCESSED' && (
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: '#3B82F6' }]}
           onPress={(e) => {

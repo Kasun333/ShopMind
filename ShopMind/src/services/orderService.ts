@@ -11,6 +11,29 @@ export interface OrdersResponse {
 
 export const orderService = {
   /**
+   * Fetch orders by status (Confirmed or Processed)
+   */
+  async getOrdersByStatus(status: string, token: string): Promise<OrdersResponse> {
+    try {
+      const response = await fetch(`${BASE_URL}/payments/orders/all`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: OrdersResponse = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching orders by status:', error);
+      throw error;
+    }
+  },
+  /**
    * Fetch all confirmed orders
    */
   async getAllOrders(token: string): Promise<OrdersResponse> {
@@ -31,6 +54,28 @@ export const orderService = {
       return data;
     } catch (error) {
       console.error('Error fetching orders:', error);
+      throw error;
+    }
+  },
+
+    /**
+   * Mark order as processed
+   */
+  async processOrder(orderId: number, token: string): Promise<void> {
+    try {
+      const response = await fetch(`${BASE_URL}/payments/update-order-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ orderId, status: 'PROCESSED' }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error processing order:', error);
       throw error;
     }
   },
