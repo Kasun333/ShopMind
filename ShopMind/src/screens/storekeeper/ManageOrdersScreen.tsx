@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
   StatusBar,
+  TouchableOpacity,
 } from 'react-native';
 import { Order, OrderFilters } from '../../types/Order';
 import { User } from '../../types/User';
@@ -33,31 +34,31 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
   const [filters, setFilters] = useState<OrderFilters>({});
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showProcessOrder, setShowProcessOrder] = useState(false);
+  const [orderTab, setOrderTab] = useState<'CONFIRMED' | 'PROCESSED'>('CONFIRMED');
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    loadOrders(orderTab);
+  }, [orderTab]);
 
   useEffect(() => {
     applyFilters();
   }, [orders, filters]);
 
-  const loadOrders = async () => {
+  const loadOrders = async (status: 'CONFIRMED' | 'PROCESSED') => {
     setLoading(true);
     try {
-      const response = await orderService.getAllOrders(token);
+      const response = await orderService.getOrdersByStatus(status, token);
       if (response.success) {
-        // Add default values for missing fields to match our UI expectations
         const ordersWithDefaults = response.orders.map(order => ({
           ...order,
-          customerName: `Customer ${order.customerId}`, // Fallback until we get customer data
-          customerPhone: '+1234567890', // Fallback
-          customerEmail: `customer${order.customerId}@email.com`, // Fallback
-          customerAddress: 'Address not available', // Fallback
-          paymentStatus: 'paid' as const, // Assuming confirmed orders are paid
-          paymentMethod: 'card' as const, // Default
-          priority: 'medium' as const, // Default
-          estimatedDeliveryTime: '30-45 minutes', // Default
+          customerName: `Customer ${order.customerId}`,
+          customerPhone: '+1234567890',
+          customerEmail: `customer${order.customerId}@email.com`,
+          customerAddress: 'Address not available',
+          paymentStatus: 'paid' as const,
+          paymentMethod: 'card' as const,
+          priority: 'medium' as const,
+          estimatedDeliveryTime: '30-45 minutes',
         }));
         setOrders(ordersWithDefaults);
       } else {
@@ -131,12 +132,12 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
     setShowProcessOrder(false);
     setSelectedOrder(null);
     // Refresh orders to get updated status
-    loadOrders();
+    loadOrders(orderTab);
   };
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadOrders().finally(() => setRefreshing(false));
+    loadOrders(orderTab).finally(() => setRefreshing(false));
   };
 
   const renderOrderItem = ({ item }: { item: Order }) => (
@@ -159,6 +160,17 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
     </View>
   );
 
+  if (loading && orders.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.loadingText}>Loading orders...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -172,9 +184,27 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
       ) : (
         <SafeAreaView style={styles.container}>
           <View style={styles.content}>
-            {/* Header */}
+            {/* Header with Tabs */}
             <View style={styles.header}>
               <Text style={styles.title}>Manage Orders</Text>
+              <View style={styles.tabsContainer}>
+                <TouchableOpacity
+                  style={[styles.tab, orderTab === 'CONFIRMED' && styles.tabActive]}
+                  onPress={() => setOrderTab('CONFIRMED')}
+                >
+                  <Text style={[styles.tabText, orderTab === 'CONFIRMED' && styles.tabTextActive]}>
+                    Confirmed
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, orderTab === 'PROCESSED' && styles.tabActive]}
+                  onPress={() => setOrderTab('PROCESSED')}
+                >
+                  <Text style={[styles.tabText, orderTab === 'PROCESSED' && styles.tabTextActive]}>
+                    Processed
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.subtitle}>
                 {filteredOrders.length} of {orders.length} orders
               </Text>
@@ -227,6 +257,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748B',
   },
+  tabsContainer: {
+    flexDirection: 'row',
+    marginTop: 12,
+    marginBottom: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    backgroundColor: '#F3F4F6',
+  },
+  tabActive: {
+    backgroundColor: '#3B82F6',
+  },
+  tabText: {
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
+  },
   list: {
     flex: 1,
   },
@@ -255,6 +310,16 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748B',
   },
 });
 

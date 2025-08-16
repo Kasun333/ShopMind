@@ -13,7 +13,7 @@ export interface Order {
   orderId: number;
   customerId: number;
   orderDate: string;
-  status: 'CONFIRMED' | 'PENDING' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED';
+  status: 'CONFIRMED' | 'PENDING' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED' | 'PROCESSED';
   totalAmount: number;
   createdAt: string;
   updatedAt: string;

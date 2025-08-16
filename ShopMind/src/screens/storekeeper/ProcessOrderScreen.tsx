@@ -15,6 +15,7 @@ import { Camera } from 'expo-camera';
 import { CameraView } from 'expo-camera';
 import { Order } from '../../types/Order';
 import { User } from '../../types/User';
+import { orderService } from '../../services/orderService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -92,7 +93,7 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
   // If quantity > 1, allow scanning once and mark all
   const allItemsScanned = order.orderItems.every(item => scannedItems[item.orderItemId]);
 
-  const handleCompleteOrder = () => {
+  const handleCompleteOrder = async () => {
     if (!allItemsScanned) {
       Alert.alert(
         'Incomplete Scanning',
@@ -109,167 +110,63 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Complete',
-          onPress: () => {
-            // TODO: Update order status in backend
-            Alert.alert('Success', 'Order marked as ready for delivery!');
-            onBack();
+          onPress: async () => {
+            try {
+              await orderService.processOrder(order.orderId, token);
+              Alert.alert('Success', 'Order marked as ready for delivery!');
+              onBack();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to update order status.');
+            }
           }
         }
       ]
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Process Order</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView style={styles.content}>
-        {/* Order Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Details</Text>
-          <View style={styles.orderInfoCard}>
-            <Text style={styles.orderNumber}>Order #{order.orderId}</Text>
-            <Text style={styles.orderDate}>{formatDate(order.orderDate)}</Text>
-            <Text style={styles.customerName}>Customer: {order.customerName}</Text>
-            <Text style={styles.totalAmount}>Total: ${order.totalAmount.toFixed(2)}</Text>
-          </View>
+  // If processed, show only details
+  if (order.status === 'PROCESSED') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Order Details</Text>
+          <View style={styles.placeholder} />
         </View>
-
-        {/* Items to Scan */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Items to Scan</Text>
-          {order.orderItems.map((item) => {
-            const isScanned = scannedItems[item.orderItemId];
-            return (
+        <ScrollView style={styles.content}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Order Details</Text>
+            <View style={styles.orderInfoCard}>
+              <Text style={styles.orderNumber}>Order #{order.orderId}</Text>
+              <Text style={styles.orderDate}>{formatDate(order.orderDate)}</Text>
+              <Text style={styles.customerName}>Customer: {order.customerName}</Text>
+              <Text style={styles.totalAmount}>Total: ${order.totalAmount.toFixed(2)}</Text>
+            </View>
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Items</Text>
+            {order.orderItems.map((item) => (
               <View key={item.orderItemId} style={styles.itemCard}>
                 <Image source={{ uri: item.productImageUrl }} style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12 }} />
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.productName}</Text>
-                  <Text style={styles.itemDetails}>
-                    Qty: {item.quantity} | ${item.price.toFixed(2)} each
-                  </Text>
-                  <Text style={styles.itemTotal}>
-                    Total: ${(item.price * item.quantity).toFixed(2)}
-                  </Text>
+                  <Text style={styles.itemDetails}>Qty: {item.quantity} | ${item.price.toFixed(2)} each</Text>
+                  <Text style={styles.itemTotal}>Total: ${(item.price * item.quantity).toFixed(2)}</Text>
                   <Text style={{ fontSize: 12, color: '#64748B' }}>Barcode: {item.barcode || 'N/A'}</Text>
                 </View>
-                <View style={styles.itemActions}>
-                  {isScanned ? (
-                    <View style={styles.scannedBadge}>
-                      <Text style={styles.scannedText}>✓ Scanned</Text>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.scanButton}
-                      onPress={() => handleScanBarcode(item.orderItemId)}
-                    >
-                      <Text style={styles.scanButtonText}>📷 Scan</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
               </View>
-            );
-          })}
-        </View>
-
-        {/* Progress */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Progress</Text>
-          <View style={styles.progressCard}>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${(Object.keys(scannedItems).length / order.orderItems.length) * 100}%` }
-                ]} 
-              />
-            </View>
-            <Text style={styles.progressText}>
-              {Object.keys(scannedItems).length} of {order.orderItems.length} items scanned
-            </Text>
+            ))}
           </View>
-        </View>
-      </ScrollView>
-
-      {/* Complete Order Button */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.completeButton,
-            !allItemsScanned && styles.completeButtonDisabled
-          ]}
-          onPress={handleCompleteOrder}
-          disabled={!allItemsScanned}
-        >
-          <Text style={[
-            styles.completeButtonText,
-            !allItemsScanned && styles.completeButtonTextDisabled
-          ]}>
-            {allItemsScanned ? '✓ Complete Order' : 'Scan All Items First'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Barcode Scanner Modal */}
-      <Modal
-        visible={showBarcodeScanner}
-        animationType="slide"
-        transparent={false}
-      >
-        <SafeAreaView style={styles.scannerContainer}>
-          <View style={styles.scannerHeader}>
-            <TouchableOpacity onPress={handleCancelScan}>
-              <Text style={styles.cancelScanText}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.scannerTitle}>Scan Barcode</Text>
-            <View style={styles.placeholder} />
+          <View style={styles.section}>
+            <Text style={{ color: '#059669', fontSize: 16, textAlign: 'center', marginTop: 16 }}>This order has already been processed.</Text>
           </View>
-          {/* Camera Barcode Scanner */}
-          {hasPermission === null ? (
-            <View style={styles.cameraPlaceholder}>
-              <Text style={styles.cameraInstructions}>Requesting camera permission...</Text>
-            </View>
-          ) : hasPermission === false ? (
-            <View style={styles.cameraPlaceholder}>
-              <Text style={styles.cameraInstructions}>No access to camera</Text>
-              <Text style={styles.cameraSubtext}>Please enable camera permissions in settings</Text>
-            </View>
-          ) : (
-            <CameraView
-              onBarcodeScanned={handleBarcodeScanned}
-              barcodeScannerSettings={{ barcodeTypes: ["qr", "pdf417", "ean13", "code128", "code39", "upc_a", "upc_e"] }}
-              style={styles.cameraView}
-            />
-          )}
-          {/* Overlay for scanning guidance */}
-          {hasPermission && (
-            <View style={styles.scannerOverlay}>
-              <View style={styles.scanFrame} />
-              <Text style={styles.scanInstructions}>
-                Point camera at barcode to scan
-              </Text>
-            </View>
-          )}
-          {/* Error and Follow Option */}
-          {scanError && (
-            <View style={{ alignItems: 'center', marginTop: 24 }}>
-              <Text style={{ color: '#EF4444', fontSize: 16, marginBottom: 12 }}>{scanError}</Text>
-              <TouchableOpacity style={styles.scanButton} onPress={handleFollow}>
-                <Text style={styles.scanButtonText}>Follow (Manual/Override)</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </SafeAreaView>
-      </Modal>
-    </SafeAreaView>
-  );
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+  // ...existing code...
 };
 
 const styles = StyleSheet.create({
