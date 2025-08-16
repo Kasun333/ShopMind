@@ -10,6 +10,8 @@ import {
   Modal,
   SafeAreaView,
 } from 'react-native';
+import { Camera } from 'expo-camera';
+import { CameraView } from 'expo-camera';
 import { Order } from '../../types/Order';
 import { User } from '../../types/User';
 
@@ -26,6 +28,16 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
   const [scannedItems, setScannedItems] = useState<{[key: number]: boolean}>({});
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [currentScanningItem, setCurrentScanningItem] = useState<number | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const getCameraPermissions = async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    };
+
+    getCameraPermissions();
+  }, []);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
@@ -42,7 +54,7 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
     setShowBarcodeScanner(true);
   };
 
-  const handleBarcodeScanned = (data: string) => {
+  const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
     // For now, just mark the item as scanned
     // You can integrate actual barcode validation logic later
     if (currentScanningItem) {
@@ -53,7 +65,7 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
       
       Alert.alert(
         'Barcode Scanned Successfully!',
-        `Product barcode: ${data}`,
+        `Product barcode: ${data}\nType: ${type}`,
         [{ text: 'OK' }]
       );
     }
@@ -100,31 +112,28 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Process Order</Text>
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content}>
         {/* Order Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Information</Text>
+          <Text style={styles.sectionTitle}>Order Details</Text>
           <View style={styles.orderInfoCard}>
-            <Text style={styles.orderNumber}>#ORD-{order.orderId}</Text>
-            <Text style={styles.orderDate}>Placed: {formatDate(order.orderDate)}</Text>
-            <Text style={styles.customerName}>{order.customerName || `Customer ${order.customerId}`}</Text>
+            <Text style={styles.orderNumber}>Order #{order.orderId}</Text>
+            <Text style={styles.orderDate}>{formatDate(order.orderDate)}</Text>
+            <Text style={styles.customerName}>Customer: {order.customerName}</Text>
             <Text style={styles.totalAmount}>Total: ${order.totalAmount.toFixed(2)}</Text>
           </View>
         </View>
 
         {/* Items to Scan */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Items to Scan ({Object.keys(scannedItems).length}/{order.orderItems.length})
-          </Text>
-          
+          <Text style={styles.sectionTitle}>Items to Scan</Text>
           {order.orderItems.map((item) => {
             const isScanned = scannedItems[item.orderItemId];
             return (
@@ -211,24 +220,47 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
             <View style={styles.placeholder} />
           </View>
           
-          {/* Camera Placeholder - You'll integrate actual camera here */}
-          <View style={styles.cameraPlaceholder}>
-            <Text style={styles.cameraPlaceholderText}>📷</Text>
-            <Text style={styles.cameraInstructions}>
-              Camera view will appear here
-            </Text>
-            <Text style={styles.cameraSubtext}>
-              Point camera at product barcode
-            </Text>
-            
-            {/* Test Scan Button for Development */}
-            <TouchableOpacity
-              style={styles.testScanButton}
-              onPress={() => handleBarcodeScanned('TEST_BARCODE_12345')}
-            >
-              <Text style={styles.testScanButtonText}>Test Scan (Development)</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Camera Barcode Scanner */}
+          {hasPermission === null ? (
+            <View style={styles.cameraPlaceholder}>
+              <Text style={styles.cameraInstructions}>Requesting camera permission...</Text>
+            </View>
+          ) : hasPermission === false ? (
+            <View style={styles.cameraPlaceholder}>
+              <Text style={styles.cameraInstructions}>No access to camera</Text>
+              <Text style={styles.cameraSubtext}>Please enable camera permissions in settings</Text>
+            </View>
+          ) : (
+            <CameraView
+              onBarcodeScanned={handleBarcodeScanned}
+              barcodeScannerSettings={{ 
+                barcodeTypes: ["qr", "pdf417", "ean13", "code128", "code39", "upc_a", "upc_e"] 
+              }}
+              style={styles.cameraView}
+            />
+          )}
+          
+          {/* Overlay for scanning guidance */}
+          {hasPermission && (
+            <View style={styles.scannerOverlay}>
+              <View style={styles.scanFrame} />
+              <Text style={styles.scanInstructions}>
+                Point camera at barcode to scan
+              </Text>
+            </View>
+          )}
+          
+          {/* Test Scan Button for Development */}
+          {__DEV__ && (
+            <View style={styles.testButtonContainer}>
+              <TouchableOpacity
+                style={styles.testScanButton}
+                onPress={() => handleBarcodeScanned({ type: 'test', data: 'TEST_BARCODE_12345' })}
+              >
+                <Text style={styles.testScanButtonText}>Test Scan (Dev Only)</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -438,15 +470,42 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
   },
+  cameraView: {
+    flex: 1,
+  },
+  scannerOverlay: {
+    position: 'absolute',
+    top: 100,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+  scanFrame: {
+    width: 250,
+    height: 250,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+  scanInstructions: {
+    marginTop: 20,
+    fontSize: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
   cameraPlaceholder: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1F2937',
-  },
-  cameraPlaceholderText: {
-    fontSize: 64,
-    marginBottom: 16,
   },
   cameraInstructions: {
     fontSize: 18,
@@ -460,11 +519,18 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     textAlign: 'center',
   },
+  testButtonContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    right: 20,
+  },
   testScanButton: {
     backgroundColor: '#3B82F6',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
+    alignItems: 'center',
   },
   testScanButtonText: {
     color: '#FFFFFF',
