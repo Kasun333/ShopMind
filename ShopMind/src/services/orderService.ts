@@ -1,6 +1,6 @@
 import { Order } from '../types/Order';
 
-const BASE_URL = 'http://10.59.35.210:8084/api';
+const BASE_URL = 'http://192.168.1.7:8090/api';
 
 export interface OrdersResponse {
   success: boolean;

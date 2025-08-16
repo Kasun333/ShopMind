@@ -35,7 +35,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     { id: 6, name: 'Food', icon: '🍔' },
   ];
 
-  const BASE_URL = 'http://10.10.31.7:8083';
+  const BASE_URL = 'http://192.168.1.7:8083';
 
   // Fetch all products
   const fetchProducts = async () => {
