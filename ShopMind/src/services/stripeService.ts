@@ -47,7 +47,7 @@ export interface CreatePaymentIntentResponse {
 export class StripeService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://10.10.31.7:8084') {
+  constructor(baseUrl: string = 'http://192.168.1.7:8084') {
     this.baseUrl = baseUrl;
   }
 

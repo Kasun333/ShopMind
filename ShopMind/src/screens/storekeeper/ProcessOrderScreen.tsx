@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Image } from 'react-native';
 import {
   View,
   Text,
@@ -25,7 +26,11 @@ interface ProcessOrderScreenProps {
 }
 
 const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, order, onBack }) => {
+  // scannedItems: { [orderItemId]: boolean }
   const [scannedItems, setScannedItems] = useState<{[key: number]: boolean}>({});
+  // scannedBarcodes: { [orderItemId]: string | null }
+  const [scannedBarcodes, setScannedBarcodes] = useState<{[key: number]: string | null}>({});
+  const [scanError, setScanError] = useState<string | null>(null);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [currentScanningItem, setCurrentScanningItem] = useState<number | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -55,30 +60,36 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
   };
 
   const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
-    // For now, just mark the item as scanned
-    // You can integrate actual barcode validation logic later
-    if (currentScanningItem) {
-      setScannedItems(prev => ({
-        ...prev,
-        [currentScanningItem]: true
-      }));
-      
-      Alert.alert(
-        'Barcode Scanned Successfully!',
-        `Product barcode: ${data}\nType: ${type}`,
-        [{ text: 'OK' }]
-      );
+    if (currentScanningItem != null) {
+      const item = order.orderItems.find(i => i.orderItemId === currentScanningItem);
+      if (!item) return;
+      // If barcode is null, allow any scan
+      if (!item.barcode || item.barcode === data) {
+        setScannedItems(prev => ({ ...prev, [currentScanningItem]: true }));
+        setScannedBarcodes(prev => ({ ...prev, [currentScanningItem]: data }));
+        setScanError(null);
+        Alert.alert('Barcode Scanned!', `Product: ${item.productName}\nBarcode: ${data}`);
+        setShowBarcodeScanner(false);
+        setCurrentScanningItem(null);
+      } else {
+        setScanError(`Scanned barcode does not match for ${item.productName}.`);
+      }
     }
-    
-    setShowBarcodeScanner(false);
-    setCurrentScanningItem(null);
   };
 
   const handleCancelScan = () => {
     setShowBarcodeScanner(false);
     setCurrentScanningItem(null);
+    setScanError(null);
   };
 
+  const handleFollow = () => {
+    setShowBarcodeScanner(false);
+    setCurrentScanningItem(null);
+    setScanError(null);
+  };
+
+  // If quantity > 1, allow scanning once and mark all
   const allItemsScanned = order.orderItems.every(item => scannedItems[item.orderItemId]);
 
   const handleCompleteOrder = () => {
@@ -138,6 +149,7 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
             const isScanned = scannedItems[item.orderItemId];
             return (
               <View key={item.orderItemId} style={styles.itemCard}>
+                <Image source={{ uri: item.productImageUrl }} style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12 }} />
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.productName}</Text>
                   <Text style={styles.itemDetails}>
@@ -146,8 +158,8 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
                   <Text style={styles.itemTotal}>
                     Total: ${(item.price * item.quantity).toFixed(2)}
                   </Text>
+                  <Text style={{ fontSize: 12, color: '#64748B' }}>Barcode: {item.barcode || 'N/A'}</Text>
                 </View>
-                
                 <View style={styles.itemActions}>
                   {isScanned ? (
                     <View style={styles.scannedBadge}>
@@ -219,7 +231,6 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
             <Text style={styles.scannerTitle}>Scan Barcode</Text>
             <View style={styles.placeholder} />
           </View>
-          
           {/* Camera Barcode Scanner */}
           {hasPermission === null ? (
             <View style={styles.cameraPlaceholder}>
@@ -233,13 +244,10 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
           ) : (
             <CameraView
               onBarcodeScanned={handleBarcodeScanned}
-              barcodeScannerSettings={{ 
-                barcodeTypes: ["qr", "pdf417", "ean13", "code128", "code39", "upc_a", "upc_e"] 
-              }}
+              barcodeScannerSettings={{ barcodeTypes: ["qr", "pdf417", "ean13", "code128", "code39", "upc_a", "upc_e"] }}
               style={styles.cameraView}
             />
           )}
-          
           {/* Overlay for scanning guidance */}
           {hasPermission && (
             <View style={styles.scannerOverlay}>
@@ -249,15 +257,12 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
               </Text>
             </View>
           )}
-          
-          {/* Test Scan Button for Development */}
-          {__DEV__ && (
-            <View style={styles.testButtonContainer}>
-              <TouchableOpacity
-                style={styles.testScanButton}
-                onPress={() => handleBarcodeScanned({ type: 'test', data: 'TEST_BARCODE_12345' })}
-              >
-                <Text style={styles.testScanButtonText}>Test Scan (Dev Only)</Text>
+          {/* Error and Follow Option */}
+          {scanError && (
+            <View style={{ alignItems: 'center', marginTop: 24 }}>
+              <Text style={{ color: '#EF4444', fontSize: 16, marginBottom: 12 }}>{scanError}</Text>
+              <TouchableOpacity style={styles.scanButton} onPress={handleFollow}>
+                <Text style={styles.scanButtonText}>Follow (Manual/Override)</Text>
               </TouchableOpacity>
             </View>
           )}

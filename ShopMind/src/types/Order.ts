@@ -6,6 +6,7 @@ export interface OrderItem {
   quantity: number;
   price: number;
   createdAt: string;
+  barcode:string
 }
 
 export interface Order {
