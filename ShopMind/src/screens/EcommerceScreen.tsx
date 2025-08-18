@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, FlatList, TextInput, Alert, Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import BottomNavigation from '../components/BottomNavigation';
 import MessagesScreen from './MessagesScreen';
 import CartNavigation from '../navigation/CartNavigation';
@@ -35,7 +36,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     { id: 6, name: 'Food', icon: '🍔' },
   ];
 
-  const BASE_URL = 'http://192.168.1.7:8083';
+  const BASE_URL = 'http://10.59.35.210:8082';
 
   // Fetch all products
   const fetchProducts = async () => {
@@ -43,8 +44,13 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     try {
       const response = await fetch(`${BASE_URL}/api/products`);
       if (response.ok) {
-        const data: Product[] = await response.json();
-        setProducts(data);
+        const data: any[] = await response.json();
+        // Map id to productId for frontend compatibility
+        const mappedProducts: Product[] = data.map(item => ({
+          ...item,
+          productId: item.id
+        }));
+        setProducts(mappedProducts);
       } else {
         Alert.alert('Error', 'Failed to fetch products');
       }
@@ -62,8 +68,12 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     try {
       const response = await fetch(`${BASE_URL}/api/products/category/${categoryId}`);
       if (response.ok) {
-        const data: Product[] = await response.json();
-        setProducts(data);
+        const data: any[] = await response.json();
+        const mappedProducts: Product[] = data.map(item => ({
+          ...item,
+          productId: item.id
+        }));
+        setProducts(mappedProducts);
         setSelectedCategory(categoryId);
       } else {
         Alert.alert('Error', 'Failed to fetch category products');
@@ -144,6 +154,14 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
 
   const renderHomeScreen = () => (
     <View style={styles.container}>
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#072033ff', '#2A7CC7', '#245e91ff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.backgroundBox}
+      />
+      
       <View style={styles.header}>
         <Text style={styles.title}>ShopMind</Text>
         <Text style={styles.subtitle}>Hello, {user.fullName}</Text>
@@ -157,9 +175,12 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
             <TextInput
               style={styles.searchInput}
               placeholder="Search products..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="rgba(255, 255, 255, 0.6)"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              underlineColorAndroid="transparent"
+              autoCorrect={false}
+              spellCheck={false}
             />
           </View>
         </View>
@@ -204,7 +225,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
           
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#3B82F6" />
+              <ActivityIndicator size="large" color="#6366F1" />
               <Text style={styles.loadingText}>Loading products...</Text>
             </View>
           ) : filteredProducts.length === 0 ? (
@@ -223,7 +244,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
                   onProductPress={navigateToProductDetail}
                 />
               )}
-              keyExtractor={(item) => item.productId.toString()}
+              keyExtractor={(item) => item.productId !== undefined ? item.productId.toString() : `product-${Math.random()}`}
               numColumns={2}
               columnWrapperStyle={styles.productRow}
               scrollEnabled={false}
@@ -238,12 +259,19 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
         style={styles.floatingCartButton}
         onPress={() => setActiveTab('cart')}
       >
-        <Text style={styles.cartIcon}>🛒</Text>
-        {cartItems > 0 && (
-          <View style={styles.cartBadge}>
-            <Text style={styles.cartBadgeText}>{cartItems}</Text>
-          </View>
-        )}
+        <LinearGradient
+          colors={['#6366F1', '#4F46E5']}
+          style={styles.cartButtonGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Text style={styles.cartIcon}>🛒</Text>
+          {cartItems > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cartItems}</Text>
+            </View>
+          )}
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
@@ -256,7 +284,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
   }> = ({ product, onAddToCart, onProductPress }) => (
     <TouchableOpacity 
       style={styles.productCard}
-      onPress={() => onProductPress(product.productId)}
+      onPress={() => onProductPress(product.productId !== undefined ? product.productId : -1)}
       activeOpacity={0.7}
     >
       <View style={styles.productImageContainer}>
@@ -300,9 +328,16 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
             }}
             disabled={product.stock === 0}
           >
-            <Text style={[styles.addToCartText, product.stock === 0 && styles.addToCartTextDisabled]}>
-              {product.stock === 0 ? '✗' : '+'}
-            </Text>
+            <LinearGradient
+              colors={product.stock === 0 ? ['#F3F4F6', '#F3F4F6'] : ['#1F2937', '#374151']}
+              style={styles.addButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={[styles.addToCartText, product.stock === 0 && styles.addToCartTextDisabled]}>
+                {product.stock === 0 ? '✗' : '+'}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -322,98 +357,103 @@ export default EcommerceScreen;
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FAFBFC',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
+  },
+  backgroundBox: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '37.5%',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    zIndex: 0,
   },
   header: {
-    padding: 20,
-    paddingTop: 60,
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: 'transparent',
+    zIndex: 1,
   },
   title: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 8,
+    color: '#FFFFFF',
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#64748B',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 4,
     fontWeight: '400',
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   searchContainer: {
-    marginBottom: 30,
+    marginBottom: 18,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
     paddingHorizontal: 16,
-    shadowColor: '#0F172A',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 4,
   },
   searchIcon: {
-    fontSize: 18,
-    color: '#94A3B8',
-    marginRight: 12,
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginRight: 10,
+    backgroundColor: 'transparent',
   },
   searchInput: {
     flex: 1,
-    height: 52,
-    fontSize: 16,
-    color: '#0F172A',
-    fontWeight: '500',
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '400',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    paddingVertical: 0,
+    
   },
   section: {
-    marginBottom: 30,
+    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#1F2937',
+    letterSpacing: -0.3,
   },
   productCount: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
-    color: '#64748B',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
+    color: '#6366F1',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 16,
   },
   categoriesContainer: {
     marginBottom: 8,
@@ -421,37 +461,35 @@ const styles = StyleSheet.create({
   categoryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    marginRight: 12,
-    minWidth: 90,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    marginRight: 10,
+    minWidth: 80,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     elevation: 2,
   },
   categoryCardActive: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    borderColor: '#6366F1',
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
   },
   categoryIcon: {
     fontSize: 24,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   categoryName: {
-    color: '#374151',
+    color: '#6B7280',
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
   },
   categoryNameActive: {
-    color: '#3B82F6',
+    color: '#6366F1',
   },
   loadingContainer: {
     alignItems: 'center',
@@ -460,8 +498,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#64748B',
+    fontSize: 14,
+    color: '#6B7280',
     fontWeight: '500',
   },
   emptyContainer: {
@@ -472,17 +510,19 @@ const styles = StyleSheet.create({
   emptyIcon: {
     fontSize: 48,
     marginBottom: 12,
+    opacity: 0.5,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 20,
   },
   productRow: {
     justifyContent: 'space-between',
@@ -490,84 +530,86 @@ const styles = StyleSheet.create({
   },
   productCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    width: (width - 52) / 2,
+    borderColor: '#F1F3F5',
+    shadowColor: 'rgba(0, 0, 0, 0.06)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+    width: (width - 44) / 2,
     overflow: 'hidden',
   },
   productImageContainer: {
     height: 120,
     position: 'relative',
+    backgroundColor: '#F8F9FA',
   },
   productImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F8F9FA',
   },
   productImagePlaceholder: {
     height: 120,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
   productImageIcon: {
-    fontSize: 32,
-    color: '#94A3B8',
+    fontSize: 30,
+    color: '#D1D5DB',
   },
   outOfStockOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 2,
   },
   outOfStockText: {
-    color: '#FFFFFF',
+    color: '#EF4444',
+    fontWeight: '700',
     fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
   },
   productInfo: {
-    padding: 12,
+    padding: 14,
   },
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#1F2937',
     marginBottom: 4,
     lineHeight: 18,
   },
   productDescription: {
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: 11,
+    color: '#6B7280',
     marginBottom: 8,
-    lineHeight: 16,
+    lineHeight: 15,
   },
   stockContainer: {
     marginBottom: 8,
   },
   stockText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#16A34A',
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    fontSize: 10,
+    color: '#059669',
+    fontWeight: '600',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     alignSelf: 'flex-start',
   },
   stockTextEmpty: {
@@ -582,67 +624,72 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#3B82F6',
+    color: '#1F2937',
+    letterSpacing: -0.3,
   },
   addToCartButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 8,
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  addButtonGradient: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   addToCartButtonDisabled: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: '#F3F4F6',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   addToCartText: {
-    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   addToCartTextDisabled: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: '#9CA3AF',
   },
   floatingCartButton: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 20,
     right: 20,
-    backgroundColor: '#3B82F6',
-    borderRadius: 28,
     width: 56,
     height: 56,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 8,
   },
+  cartButtonGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cartIcon: {
-    fontSize: 24,
     color: '#FFFFFF',
+    fontSize: 22,
   },
   cartBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
+    top: -3,
+    right: -3,
     backgroundColor: '#EF4444',
     borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
   cartBadgeText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

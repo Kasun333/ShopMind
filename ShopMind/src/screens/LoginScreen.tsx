@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Dimensions, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { User } from '../types/User';
 
 const { width, height } = Dimensions.get('window');
@@ -45,7 +46,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
     }
 
     try {
-      const response = await fetch('http://192.168.1.7:8090/api/auth/login', {
+      const response = await fetch('http://10.59.35.210:8090/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +84,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.backgroundGradient} />
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={['#1E6091', '#2A7CC7', '#3B95E3']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.backgroundGradient}
+      />
       
       {/* Custom Toast */}
       {toast.visible && (
@@ -143,7 +150,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
           </View>
 
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Sign In</Text>
+            <LinearGradient
+              colors={['#2A7CC7', '#1E6091']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.loginButtonText}>Sign In</Text>
+            </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.forgotPassword}>
@@ -164,7 +178,6 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -174,8 +187,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#F8FAFC',
-    opacity: 0.95,
   },
   loginCard: {
     width: width * 0.9,
@@ -183,16 +194,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 32,
-    shadowColor: '#0F172A',
+    shadowColor: '#1E6091',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: 12,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 25,
-    elevation: 12,
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 15,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   header: {
     alignItems: 'center',
@@ -201,7 +212,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#1E6091',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
@@ -219,7 +230,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#1E6091',
     marginLeft: 4,
   },
   input: {
@@ -234,9 +245,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   inputFocused: {
-    borderColor: '#3B82F6',
+    borderColor: '#3B95E3',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#3B82F6',
+    shadowColor: '#3B95E3',
     shadowOffset: {
       width: 0,
       height: 0,
@@ -247,19 +258,25 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     height: 56,
-    backgroundColor: '#3B82F6',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
-    shadowColor: '#3B82F6',
+    overflow: 'hidden',
+    shadowColor: '#1E6091',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
+  },
+  buttonGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loginButtonText: {
     color: '#FFFFFF',
@@ -269,10 +286,10 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
   },
   forgotPasswordText: {
-    color: '#64748B',
+    color: '#2A7CC7',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -280,12 +297,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
     paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderWidth: 1.5,
+    borderColor: '#2A7CC7',
     borderRadius: 12,
+    backgroundColor: 'rgba(42, 124, 199, 0.05)',
   },
   signupButtonText: {
-    color: '#3B82F6',
+    color: '#2A7CC7',
     fontSize: 14,
     fontWeight: '600',
   },

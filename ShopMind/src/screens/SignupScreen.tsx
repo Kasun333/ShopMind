@@ -11,6 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 // @ts-ignore
 import { EMAIL_VERIFIER_API_KEY } from '@env';
 import LocationPickerModal from '../components/LocationPickerModal';
@@ -283,26 +285,31 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     label: string,
     field: string,
     placeholder: string,
+    iconName: string,
     keyboardType: any = 'default',
     secureTextEntry = false
   ) => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>{label}</Text>
-      <TextInput
-        style={[
-          styles.input,
-          focusedInput === field && styles.inputFocused
-        ]}
-        placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
-        value={formData[field as keyof typeof formData]}
-        onChangeText={(value) => updateField(field, value)}
-        onFocus={() => setFocusedInput(field)}
-        onBlur={() => setFocusedInput(null)}
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        autoCapitalize={field === 'email' ? 'none' : 'words'}
-      />
+      <View style={[
+        styles.inputWrapper,
+        focusedInput === field && styles.inputWrapperFocused,
+        field === 'email' && isEmailVerified && styles.inputWrapperVerified
+      ]}>
+        <Ionicons name={iconName as any} size={18} color={focusedInput === field ? "#2A7CC7" : "#94A3B8"} style={styles.inputIcon} />
+        <TextInput
+          style={styles.input}
+          placeholder={placeholder}
+          placeholderTextColor="#94A3B8"
+          value={formData[field as keyof typeof formData]}
+          onChangeText={(value) => updateField(field, value)}
+          onFocus={() => setFocusedInput(field)}
+          onBlur={() => setFocusedInput(null)}
+          keyboardType={keyboardType}
+          secureTextEntry={secureTextEntry}
+          autoCapitalize={field === 'email' || field === 'username' ? 'none' : 'words'}
+        />
+      </View>
     </View>
   );
 
@@ -310,21 +317,24 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>Email</Text>
       <View style={styles.emailInputRow}>
-        <TextInput
-          style={[
-            styles.emailInput,
-            focusedInput === 'email' && styles.inputFocused,
-            isEmailVerified && styles.inputVerified
-          ]}
-          placeholder="Enter your email address"
-          placeholderTextColor="#94A3B8"
-          value={formData.email}
-          onChangeText={(value) => updateField('email', value)}
-          onFocus={() => setFocusedInput('email')}
-          onBlur={() => setFocusedInput(null)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+        <View style={[
+          styles.emailInputWrapper,
+          focusedInput === 'email' && styles.inputWrapperFocused,
+          isEmailVerified && styles.inputWrapperVerified
+        ]}>
+          <Ionicons name="mail-outline" size={18} color={isEmailVerified ? "#059669" : focusedInput === 'email' ? "#2A7CC7" : "#94A3B8"} style={styles.inputIcon} />
+          <TextInput
+            style={styles.emailInput}
+            placeholder="Enter your email address"
+            placeholderTextColor="#94A3B8"
+            value={formData.email}
+            onChangeText={(value) => updateField('email', value)}
+            onFocus={() => setFocusedInput('email')}
+            onBlur={() => setFocusedInput(null)}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
         <TouchableOpacity
           style={[
             styles.verifyButton,
@@ -334,16 +344,19 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
           onPress={verifyEmail}
           disabled={isVerifyingEmail || isEmailVerified || !formData.email.trim()}
         >
-          <Text style={[
-            styles.verifyButtonText,
-            isEmailVerified && styles.verifyButtonTextVerified
-          ]}>
-            {isVerifyingEmail ? '...' : isEmailVerified ? '✓' : 'Verify'}
-          </Text>
+          {isVerifyingEmail ? (
+            <Text style={styles.verifyButtonText}>...</Text>
+          ) : isEmailVerified ? (
+            <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+          ) : (
+            <Text style={styles.verifyButtonText}>Verify</Text>
+          )}
         </TouchableOpacity>
       </View>
       {isEmailVerified && (
-        <Text style={styles.verifiedText}>✅ Email verified successfully!</Text>
+        <Text style={styles.verifiedText}>
+          <Ionicons name="checkmark-circle" size={14} color="#059669" /> Email verified successfully!
+        </Text>
       )}
     </View>
   );
@@ -352,25 +365,35 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>Address</Text>
       <View style={styles.addressInputRow}>
-        <TextInput
-          style={[
-            styles.addressInput,
-            focusedInput === 'formattedAddress' && styles.inputFocused
-          ]}
-          placeholder="Enter your address or select on map"
-          placeholderTextColor="#94A3B8"
-          value={formData.formattedAddress}
-          onChangeText={(value) => updateField('formattedAddress', value)}
-          onFocus={() => setFocusedInput('formattedAddress')}
-          onBlur={() => setFocusedInput(null)}
-          multiline={true}
-          numberOfLines={2}
-        />
+        <View style={[
+          styles.addressInputWrapper,
+          focusedInput === 'formattedAddress' && styles.inputWrapperFocused
+        ]}>
+          <Ionicons name="location-outline" size={18} color={focusedInput === 'formattedAddress' ? "#2A7CC7" : "#94A3B8"} style={styles.inputIcon} />
+          <TextInput
+            style={styles.addressInput}
+            placeholder="Enter your address or select on map"
+            placeholderTextColor="#94A3B8"
+            value={formData.formattedAddress}
+            onChangeText={(value) => updateField('formattedAddress', value)}
+            onFocus={() => setFocusedInput('formattedAddress')}
+            onBlur={() => setFocusedInput(null)}
+            multiline={true}
+            numberOfLines={2}
+          />
+        </View>
         <TouchableOpacity
           style={styles.mapButton}
           onPress={() => setShowLocationModal(true)}
         >
-          <Text style={styles.mapButtonText}>🗺️</Text>
+          <LinearGradient
+            colors={['#3B95E3', '#2A7CC7']}
+            style={styles.mapButtonGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="map" size={22} color="#FFFFFF" />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
@@ -381,7 +404,13 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.backgroundGradient} />
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={['#1E6091', '#2A7CC7', '#3B95E3']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.backgroundGradient}
+      />
       
       {/* Custom Toast */}
       {toast.visible && (
@@ -396,54 +425,98 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
             styles.toastIndicator,
             toast.type === 'success' ? styles.indicatorSuccess : styles.indicatorError
           ]} />
-          <Text style={styles.toastText}>{toast.message}</Text>
+          <Text style={styles.toastText}>
+            {toast.type === 'success' ? (
+              <Ionicons name="checkmark-circle" size={16} color="#059669" style={{marginRight: 6}} />
+            ) : (
+              <Ionicons name="alert-circle" size={16} color="#DC2626" style={{marginRight: 6}} />
+            )}
+            {toast.message}
+          </Text>
         </Animated.View>
       )}
+
+      {/* Header with Logo */}
+      <View style={styles.logoContainer}>
+        <Text style={styles.logoText}>ShopMind</Text>
+        <Text style={styles.logoTagline}>Create your account</Text>
+      </View>
 
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.signupCard}>
+        <View style={styles.card}>
           <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join ShopMind today</Text>
+            <Text style={styles.title}>Join ShopMind</Text>
+            <Text style={styles.subtitle}>Fill in your details to get started</Text>
           </View>
 
           <View style={styles.form}>
-            {renderInput('Full Name', 'fullName', 'Enter your full name')}
-            {renderInput('Username', 'username', 'Choose a username')}
+            {renderInput('Full Name', 'fullName', 'Enter your full name', 'person-outline')}
+            {renderInput('Username', 'username', 'Choose a username', 'at-outline')}
             {renderEmailInput()}
-            {renderInput('Phone Number', 'phoneNumber', '+1234567890', 'phone-pad')}
-            {renderInput('Password', 'password', 'Create a secure password', 'default', true)}
+            {renderInput('Phone Number', 'phoneNumber', '+1234567890', 'call-outline', 'phone-pad')}
+            {renderInput('Password', 'password', 'Create a secure password', 'lock-closed-outline', 'default', true)}
             {renderAddressInput()}
-            {renderInput('Date of Birth', 'dateOfBirth', 'YYYY-MM-DD (e.g., 1990-01-15)')}
+            {renderInput('Date of Birth', 'dateOfBirth', 'YYYY-MM-DD (e.g., 1990-01-15)', 'calendar-outline')}
             
             {/* Optional fields */}
             <View style={styles.optionalSection}>
-              <Text style={styles.optionalTitle}>Optional Information</Text>
+              <View style={styles.optionalHeader}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.optionalTitle}>Optional Information</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              
               <ImagePickerComponent 
                 onImageUpload={handleImageUpload}
                 currentImageUrl={formData.profileImageUrl}
                 label="Profile Image"
               />
-              {renderInput('Latitude', 'latitude', 'Will be auto-filled from map', 'numeric')}
-              {renderInput('Longitude', 'longitude', 'Will be auto-filled from map', 'numeric')}
+              
+              <View style={styles.locationFields}>
+                <View style={styles.halfWidth}>
+                  {renderInput('Latitude', 'latitude', 'Auto-filled from map', 'navigate-outline', 'numeric')}
+                </View>
+                <View style={styles.halfWidth}>
+                  {renderInput('Longitude', 'longitude', 'Auto-filled from map', 'navigate-circle-outline', 'numeric')}
+                </View>
+              </View>
             </View>
 
             <TouchableOpacity 
               style={[styles.signupButton, (isLoading || !isEmailVerified) && styles.buttonDisabled]} 
               onPress={handleSignup}
               disabled={isLoading || !isEmailVerified}
+              activeOpacity={0.8}
             >
-              <Text style={styles.signupButtonText}>
-                {isLoading ? 'Creating Account...' : 'Create Account'}
-              </Text>
+              <LinearGradient
+                colors={['#2A7CC7', '#1E6091']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.buttonGradient}
+              >
+                <Text style={styles.signupButtonText}>
+                  {isLoading ? (
+                    <>
+                      <Ionicons name="refresh" size={18} color="#FFFFFF" style={{marginRight: 8}} />
+                      Creating Account...
+                    </>
+                  ) : (
+                    <>
+                      <Ionicons name="person-add" size={18} color="#FFFFFF" style={{marginRight: 8}} />
+                      Create Account
+                    </>
+                  )}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.backToLogin} onPress={onBackToLogin}>
+            <TouchableOpacity style={styles.backToLogin} onPress={onBackToLogin} activeOpacity={0.7}>
               <Text style={styles.backToLoginText}>
+                <Ionicons name="arrow-back" size={16} color="#FFFFFF" style={{marginRight: 4}} />
                 Already have an account? <Text style={styles.loginLink}>Sign In</Text>
               </Text>
             </TouchableOpacity>
@@ -466,7 +539,6 @@ export default SignupScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   backgroundGradient: {
     position: 'absolute',
@@ -474,45 +546,52 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#F8FAFC',
-    opacity: 0.95,
+  },
+  logoContainer: {
+    paddingTop: 50,
+    paddingBottom: 10,
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  logoTagline: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginTop: 4,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-    paddingTop: 60,
+    paddingTop: 10,
     paddingBottom: 40,
+    paddingHorizontal: 20,
   },
-  signupCard: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: '#FFFFFF',
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     borderRadius: 24,
-    padding: 32,
-    shadowColor: '#0F172A',
+    padding: 24,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 10,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 25,
-    elevation: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignSelf: 'center',
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#1E6091',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
@@ -522,61 +601,78 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   form: {
-    gap: 20,
+    gap: 18,
   },
   inputContainer: {
-    gap: 8,
+    gap: 6,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#1E6091',
     marginLeft: 4,
   },
-  input: {
-    height: 52,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  inputWrapperFocused: {
+    borderColor: '#2A7CC7',
+    shadowColor: '#2A7CC7',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  inputWrapperVerified: {
+    borderColor: '#059669',
+  },
+  inputIcon: {
+    marginLeft: 16,
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    height: 52,
+    paddingRight: 16,
     fontSize: 16,
-    color: '#0F172A',
+    color: '#1F2937',
     fontWeight: '500',
   },
   emailInputRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     alignItems: 'center',
+  },
+  emailInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   emailInput: {
     flex: 1,
     height: 52,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    paddingRight: 16,
     fontSize: 16,
-    color: '#0F172A',
+    color: '#1F2937',
     fontWeight: '500',
   },
   verifyButton: {
     height: 52,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     backgroundColor: '#16A34A',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 80,
-    shadowColor: '#16A34A',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
   },
   verifyButtonVerified: {
     backgroundColor: '#059669',
@@ -589,11 +685,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  verifyButtonTextVerified: {
-    fontSize: 18,
-  },
   verifiedText: {
-    color: '#16A34A',
+    color: '#059669',
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
@@ -601,90 +694,81 @@ const styles = StyleSheet.create({
   },
   addressInputRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     alignItems: 'flex-start',
+  },
+  addressInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   addressInput: {
     flex: 1,
     minHeight: 52,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingRight: 16,
+    paddingTop: 16,
     fontSize: 16,
-    color: '#0F172A',
+    color: '#1F2937',
     fontWeight: '500',
     textAlignVertical: 'top',
   },
   mapButton: {
     height: 52,
     width: 52,
-    backgroundColor: '#3B82F6',
     borderRadius: 12,
+    overflow: 'hidden',
+  },
+  mapButtonGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  mapButtonText: {
-    fontSize: 20,
-  },
-  inputVerified: {
-    borderColor: '#16A34A',
-    backgroundColor: '#F0FDF4',
-  },
-  inputFocused: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#3B82F6',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
   },
   optionalSection: {
     marginTop: 16,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    paddingTop: 16,
+  },
+  optionalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   optionalTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#64748B',
-    marginBottom: 16,
-    textAlign: 'center',
+    paddingHorizontal: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  locationFields: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfWidth: {
+    flex: 1,
   },
   signupButton: {
-    height: 52,
-    backgroundColor: '#3B82F6',
+    height: 56,
     borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 16,
+  },
+  buttonGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
-    shadowColor: '#3B82F6',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
   },
   buttonDisabled: {
-    backgroundColor: '#94A3B8',
-    shadowOpacity: 0.1,
+    opacity: 0.6,
   },
   signupButtonText: {
     color: '#FFFFFF',
@@ -693,39 +777,40 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   backToLogin: {
-    alignItems: 'center',
+    padding: 14,
     marginTop: 16,
+    alignItems: 'center',
   },
   backToLoginText: {
-    color: '#64748B',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '500',
   },
   loginLink: {
-    color: '#3B82F6',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   toast: {
     position: 'absolute',
     top: 60,
     right: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 12,
     padding: 16,
     minWidth: 280,
     maxWidth: width * 0.9,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#0F172A',
+    shadowColor: '#000000',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     zIndex: 1000,
   },
   toastSuccess: {
