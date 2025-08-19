@@ -6,7 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  StatusBar,
+  SafeAreaView,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { User } from '../../types/User';
 import { OrderStats } from '../../types/Order';
 
@@ -31,10 +36,10 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
   };
 
   const quickActions = [
-    { id: '1', title: 'View Orders', icon: '📋', color: '#3B82F6' },
-    { id: '2', title: 'Manage Inventory', icon: '📦', color: '#10B981' },
-    { id: '3', title: 'Add Product', icon: '➕', color: '#8B5CF6' },
-    { id: '4', title: 'Reports', icon: '📊', color: '#F59E0B' },
+    { id: '1', title: 'View Orders', icon: 'receipt-outline', color: '#10B981' },
+    { id: '2', title: 'Manage Inventory', icon: 'cube-outline', color: '#059669' },
+    { id: '3', title: 'Add Product', icon: 'add-circle-outline', color: '#047857' },
+    { id: '4', title: 'Reports', icon: 'bar-chart-outline', color: '#065F46' },
   ];
 
   const recentActivities = [
@@ -46,11 +51,11 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'order': return '🆕';
-      case 'status': return '✅';
-      case 'alert': return '⚠️';
-      case 'delivery': return '🚚';
-      default: return '📝';
+      case 'order': return 'cart-outline';
+      case 'status': return 'checkmark-circle-outline';
+      case 'alert': return 'alert-circle-outline';
+      case 'delivery': return 'car-outline';
+      default: return 'document-text-outline';
     }
   };
 
@@ -73,147 +78,318 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     }
   };
 
-  return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Good morning</Text>
-          <Text style={styles.userName}>{user.fullName}</Text>
-        </View>
-        <View style={styles.profileBadge}>
-          <Text style={styles.profileText}>
-            {user.fullName.split(' ').map(name => name[0]).join('').toUpperCase()}
-          </Text>
-        </View>
-      </View>
+  const currentDate = "2025-08-18 18:07:23";
+  const username = "Kasun333";
 
-      {/* Stats Cards */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, styles.primaryCard]}>
-            <Text style={styles.statNumber}>{stats.pendingOrders}</Text>
-            <Text style={styles.statLabel}>Pending Orders</Text>
-            <Text style={styles.statIcon}>⏳</Text>
+  return (
+    <View style={styles.rootContainer}>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="light-content"
+      />
+      
+      {/* Full-screen gradient background */}
+      <LinearGradient
+        colors={['#047857', '#059669', '#10B981']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.backgroundGradient}
+      />
+
+      <SafeAreaView style={styles.mainContainer}>
+        {/* Header Section */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Good morning</Text>
+            <Text style={styles.userName}>{user.fullName}</Text>
+            <Text style={styles.userRole}>Store Manager</Text>
           </View>
-          <View style={[styles.statCard, styles.successCard]}>
-            <Text style={styles.statNumber}>{stats.completedOrders}</Text>
-            <Text style={styles.statLabel}>Completed</Text>
-            <Text style={styles.statIcon}>✅</Text>
+          <View style={styles.profileContainer}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+              style={styles.profileBadge}
+            >
+              <Text style={styles.profileText}>
+                {user.fullName.split(' ').map(name => name[0]).join('').toUpperCase()}
+              </Text>
+            </LinearGradient>
+            <View style={styles.statusIndicator} />
           </View>
         </View>
         
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, styles.revenueCard]}>
-            <Text style={styles.statNumber}>${stats.todayRevenue.toFixed(0)}</Text>
-            <Text style={styles.statLabel}>Today's Revenue</Text>
-            <Text style={styles.statIcon}>💰</Text>
-          </View>
-          <View style={[styles.statCard, styles.monthCard]}>
-            <Text style={styles.statNumber}>${(stats.monthRevenue / 1000).toFixed(1)}k</Text>
-            <Text style={styles.statLabel}>Month Revenue</Text>
-            <Text style={styles.statIcon}>📈</Text>
-          </View>
+        <View style={styles.dateTimeContainer}>
+          <Text style={styles.dateTimeText}>
+            <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.8)" /> {currentDate}
+          </Text>
         </View>
-      </View>
 
-      {/* Quick Actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionsGrid}>
-          {quickActions.map((action) => (
-            <TouchableOpacity 
-              key={action.id} 
-              style={styles.actionCard}
-              onPress={() => handleQuickAction(action.id)}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: `${action.color}20` }]}>
-                <Text style={styles.actionIconText}>{action.icon}</Text>
+        {/* Content */}
+        <ScrollView 
+          style={styles.container} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.contentContainer}
+        >
+          {/* Stats Cards */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#ECFDF5', '#D1FAE5']}
+                  style={styles.statGradient}
+                >
+                  <View style={styles.statContent}>
+                    <Text style={styles.statNumber}>{stats.pendingOrders}</Text>
+                    <Text style={styles.statLabel}>Pending</Text>
+                  </View>
+                  <View style={styles.statIconContainer}>
+                    <Ionicons name="hourglass-outline" size={26} color="#F59E0B" />
+                  </View>
+                </LinearGradient>
               </View>
-              <Text style={styles.actionTitle}>{action.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Recent Activities */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activities</Text>
-        <View style={styles.activitiesContainer}>
-          {recentActivities.map((activity) => (
-            <View key={activity.id} style={styles.activityItem}>
-              <Text style={styles.activityIcon}>{getActivityIcon(activity.type)}</Text>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityText}>{activity.text}</Text>
-                <Text style={styles.activityTime}>{activity.time}</Text>
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#ECFDF5', '#D1FAE5']}
+                  style={styles.statGradient}
+                >
+                  <View style={styles.statContent}>
+                    <Text style={styles.statNumber}>{stats.completedOrders}</Text>
+                    <Text style={styles.statLabel}>Completed</Text>
+                  </View>
+                  <View style={styles.statIconContainer}>
+                    <Ionicons name="checkmark-circle-outline" size={26} color="#10B981" />
+                  </View>
+                </LinearGradient>
               </View>
             </View>
-          ))}
-        </View>
-      </View>
+            
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#FAFBFC']}
+                  style={styles.statGradient}
+                >
+                  <View style={styles.statContent}>
+                    <Text style={styles.statNumber}>${stats.todayRevenue.toFixed(0)}</Text>
+                    <Text style={styles.statLabel}>Today Revenue</Text>
+                  </View>
+                  <View style={styles.statIconContainer}>
+                    <Ionicons name="cash-outline" size={26} color="#10B981" />
+                  </View>
+                </LinearGradient>
+              </View>
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#ECFDF5', '#D1FAE5']}
+                  style={styles.statGradient}
+                >
+                  <View style={styles.statContent}>
+                    <Text style={styles.statNumber}>${(stats.monthRevenue / 1000).toFixed(1)}k</Text>
+                    <Text style={styles.statLabel}>Month</Text>
+                  </View>
+                  <View style={styles.statIconContainer}>
+                    <Ionicons name="trending-up-outline" size={26} color="#10B981" />
+                  </View>
+                </LinearGradient>
+              </View>
+            </View>
+          </View>
 
-      {/* Order Summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order Summary</Text>
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Orders:</Text>
-            <Text style={styles.summaryValue}>{stats.totalOrders}</Text>
+          {/* Order Summary */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="analytics-outline" size={20} color="#047857" /> Order Summary
+            </Text>
+            <View style={styles.summaryCard}>
+              <LinearGradient
+                colors={['#ECFDF5', '#D1FAE5']}
+                style={styles.summaryGradient}
+              >
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Total Orders:</Text>
+                  <Text style={styles.summaryValue}>{stats.totalOrders}</Text>
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Pending:</Text>
+                  <View style={styles.valueBadge}>
+                    <Text style={[styles.summaryValue, styles.pendingText]}>{stats.pendingOrders}</Text>
+                  </View>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Completed:</Text>
+                  <View style={[styles.valueBadge, styles.successBadge]}>
+                    <Text style={[styles.summaryValue, styles.successText]}>{stats.completedOrders}</Text>
+                  </View>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Cancelled:</Text>
+                  <View style={[styles.valueBadge, styles.errorBadge]}>
+                    <Text style={[styles.summaryValue, styles.errorText]}>{stats.cancelledOrders}</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </View>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Pending:</Text>
-            <Text style={[styles.summaryValue, styles.pendingText]}>{stats.pendingOrders}</Text>
+
+          {/* Quick Actions */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="flash-outline" size={20} color="#047857" /> Quick Actions
+            </Text>
+            <View style={styles.actionsGrid}>
+              {quickActions.map((action) => (
+                <TouchableOpacity 
+                  key={action.id} 
+                  style={styles.actionCard}
+                  onPress={() => handleQuickAction(action.id)}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={['#ECFDF5', '#D1FAE5']}
+                    style={styles.actionGradient}
+                  >
+                    <View style={[styles.actionIcon, { backgroundColor: `${action.color}20` }]}>
+                      <Ionicons name={action.icon as any} size={24} color={action.color} />
+                    </View>
+                    <Text style={styles.actionTitle}>{action.title}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Completed:</Text>
-            <Text style={[styles.summaryValue, styles.successText]}>{stats.completedOrders}</Text>
+
+          {/* Recent Activities */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="time-outline" size={20} color="#047857" /> Recent Activities
+            </Text>
+            <View style={styles.activitiesContainer}>
+              <LinearGradient
+                colors={['#ECFDF5', '#D1FAE5']}
+                style={styles.activitiesGradient}
+              >
+                {recentActivities.map((activity, index) => (
+                  <View key={activity.id} style={[
+                    styles.activityItem,
+                    index < recentActivities.length - 1 && styles.activityBorder
+                  ]}>
+                    <View style={[
+                      styles.activityIconContainer,
+                      activity.type === 'alert' ? styles.alertIcon : 
+                      activity.type === 'order' ? styles.orderIcon : 
+                      activity.type === 'status' ? styles.statusIcon : 
+                      styles.deliveryIcon
+                    ]}>
+                      <Ionicons name={getActivityIcon(activity.type)} size={18} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityText}>{activity.text}</Text>
+                      <Text style={styles.activityTime}>{activity.time}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                  </View>
+                ))}
+              </LinearGradient>
+            </View>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Cancelled:</Text>
-            <Text style={[styles.summaryValue, styles.errorText]}>{stats.cancelledOrders}</Text>
+
+          {/* App Info */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              <Ionicons name="person-outline" size={12} color="#64748B" /> {username}
+            </Text>
+            <Text style={styles.footerText}>© 2025 ShopMind</Text>
           </View>
-        </View>
-      </View>
-    </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  rootContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+  },
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '30%',
+  },
+  mainContainer: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   greeting: {
     fontSize: 16,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.8)',
     marginBottom: 4,
   },
   userName: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  userRole: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+  },
+  profileContainer: {
+    position: 'relative',
   },
   profileBadge: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   profileText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  statusIndicator: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: 'white',
+    bottom: 0,
+    right: 0,
+  },
+  dateTimeContainer: {
+    alignItems: 'center',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  dateTimeText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  contentContainer: {
+    paddingBottom: 20,
   },
   statsContainer: {
     padding: 20,
@@ -225,144 +401,68 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
+    borderRadius: 20,
+    overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    position: 'relative',
-    shadowColor: '#0F172A',
+    borderWidth: 0,
+    shadowColor: '#000000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  primaryCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
+  statGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    paddingHorizontal: 18,
   },
-  successCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
-  },
-  revenueCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#F59E0B',
-  },
-  monthCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#8B5CF6',
+  statContent: {
+    flex: 1,
   },
   statNumber: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1F2937',
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   statLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#6B7280',
     fontWeight: '500',
+    letterSpacing: -0.1,
   },
-  statIcon: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    fontSize: 24,
-    opacity: 0.7,
+  statIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
   },
   section: {
     margin: 20,
     marginTop: 0,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#047857',
     marginBottom: 16,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  actionCard: {
-    width: (width - 56) / 2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  actionIconText: {
-    fontSize: 20,
-  },
-  actionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    textAlign: 'center',
-  },
-  activitiesContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#0F172A',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  activityIcon: {
-    fontSize: 16,
-    marginRight: 12,
-    width: 24,
-    textAlign: 'center',
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityText: {
-    fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  activityTime: {
-    fontSize: 12,
-    color: '#64748B',
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
-    shadowColor: '#0F172A',
+    overflow: 'hidden',
+    shadowColor: '#047857',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -370,6 +470,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+  },
+  summaryGradient: {
+    padding: 20,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(4, 120, 87, 0.1)',
+    marginVertical: 12,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -379,22 +487,139 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 16,
-    color: '#64748B',
+    color: '#059669',
     fontWeight: '500',
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#047857',
   },
   pendingText: {
     color: '#F59E0B',
   },
   successText: {
-    color: '#10B981',
+    color: '#059669',
   },
   errorText: {
     color: '#EF4444',
+  },
+  valueBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  successBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  errorBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  actionCard: {
+    width: (width - 52) / 2,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#047857',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  actionGradient: {
+    padding: 20,
+    alignItems: 'center',
+    height: 110,
+    justifyContent: 'center',
+  },
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  actionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#047857',
+    textAlign: 'center',
+  },
+  activitiesContainer: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#047857',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  activitiesGradient: {
+    padding: 6,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  activityBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(4, 120, 87, 0.1)',
+  },
+  activityIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  alertIcon: {
+    backgroundColor: '#F59E0B',
+  },
+  orderIcon: {
+    backgroundColor: '#6366F1',
+  },
+  statusIcon: {
+    backgroundColor: '#10B981',
+  },
+  deliveryIcon: {
+    backgroundColor: '#8B5CF6',
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityText: {
+    fontSize: 14,
+    color: '#047857',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  activityTime: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 4,
   },
 });
 

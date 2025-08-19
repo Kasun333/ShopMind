@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../../types/Order';
 
 const { width } = Dimensions.get('window');
@@ -20,10 +22,10 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onProcessOrder })
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'PENDING': return '#F59E0B';
-      case 'CONFIRMED': return '#3B82F6';
+      case 'CONFIRMED': return '#059669';
       case 'PREPARING': return '#8B5CF6';
       case 'READY': return '#10B981';
-      case 'DELIVERED': return '#059669';
+      case 'DELIVERED': return '#047857';
       case 'CANCELLED': return '#EF4444';
       default: return '#6B7280';
     }
@@ -31,13 +33,13 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onProcessOrder })
 
   const getStatusIcon = (status: Order['status']) => {
     switch (status) {
-      case 'PENDING': return '⏳';
-      case 'CONFIRMED': return '✅';
-      case 'PREPARING': return '👨‍🍳';
-      case 'READY': return '📦';
-      case 'DELIVERED': return '🚚';
-      case 'CANCELLED': return '❌';
-      default: return '❓';
+      case 'PENDING': return 'hourglass-outline';
+      case 'CONFIRMED': return 'checkmark-circle-outline';
+      case 'PREPARING': return 'restaurant-outline';
+      case 'READY': return 'cube-outline';
+      case 'DELIVERED': return 'car-outline';
+      case 'CANCELLED': return 'close-circle-outline';
+      default: return 'help-circle-outline';
     }
   };
 
@@ -61,14 +63,14 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onProcessOrder })
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={() => onPress(order)}>
+    <TouchableOpacity style={styles.container} onPress={() => onPress(order)} activeOpacity={0.8}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.orderInfo}>
           <Text style={styles.orderNumber}>#ORD-{order.orderId}</Text>
           <Text style={styles.customerName}>{order.customerName || `Customer ${order.customerId}`}</Text>
         </View>
-        <View style={styles.priorityBadge}>
+        <View style={[styles.priorityBadge, { backgroundColor: `${getPriorityColor(order.priority || 'medium')}15` }]}>
           <View style={[styles.priorityIndicator, { backgroundColor: getPriorityColor(order.priority || 'medium') }]} />
           <Text style={[styles.priorityText, { color: getPriorityColor(order.priority || 'medium') }]}>
             {(order.priority || 'medium').toUpperCase()}
@@ -78,66 +80,111 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onProcessOrder })
 
       {/* Status and Payment */}
       <View style={styles.statusContainer}>
-        <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(order.status)}20` }]}>
-          <Text style={styles.statusIcon}>{getStatusIcon(order.status)}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(order.status)}15` }]}>
+          <Ionicons name={getStatusIcon(order.status)} size={16} color={getStatusColor(order.status)} style={styles.statusIcon} />
           <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+            {order.status.charAt(0).toUpperCase() + order.status.slice(1).toLowerCase()}
           </Text>
         </View>
         <View style={[
           styles.paymentBadge,
           { backgroundColor: (order.paymentStatus || 'paid') === 'paid' ? '#10B98120' : '#F59E0B20' }
         ]}>
+          <Ionicons 
+            name={(order.paymentStatus || 'paid') === 'paid' ? 'card-outline' : 'time-outline'} 
+            size={14} 
+            color={(order.paymentStatus || 'paid') === 'paid' ? '#10B981' : '#F59E0B'} 
+            style={styles.paymentIcon}
+          />
           <Text style={[
             styles.paymentText,
             { color: (order.paymentStatus || 'paid') === 'paid' ? '#10B981' : '#F59E0B' }
           ]}>
-            {(order.paymentStatus || 'paid') === 'paid' ? '💳 Paid' : '⏳ Pending'}
+            {(order.paymentStatus || 'paid') === 'paid' ? 'Paid' : 'Pending'}
           </Text>
         </View>
       </View>
 
       {/* Order Details */}
       <View style={styles.detailsContainer}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Items:</Text>
-          <Text style={styles.detailValue}>{order.orderItems.length} item(s)</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Total:</Text>
-          <Text style={styles.totalAmount}>${order.totalAmount.toFixed(2)}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Date:</Text>
-          <Text style={styles.detailValue}>{formatDate(order.orderDate)}</Text>
-        </View>
-        {order.estimatedDeliveryTime && (
+        <LinearGradient
+          colors={['#ECFDF5', '#D1FAE5']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.detailsGradient}
+        >
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Est. Delivery:</Text>
-            <Text style={styles.detailValue}>{order.estimatedDeliveryTime}</Text>
+            <Text style={styles.detailLabel}>
+              <Ionicons name="list-outline" size={14} color="#059669" style={styles.detailIcon} /> Items:
+            </Text>
+            <Text style={styles.detailValue}>{order.orderItems.length} item(s)</Text>
           </View>
-        )}
+          <View style={styles.divider} />
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>
+              <Ionicons name="cash-outline" size={14} color="#059669" style={styles.detailIcon} /> Total:
+            </Text>
+            <Text style={styles.totalAmount}>${order.totalAmount.toFixed(2)}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>
+              <Ionicons name="calendar-outline" size={14} color="#059669" style={styles.detailIcon} /> Date:
+            </Text>
+            <Text style={styles.detailValue}>{formatDate(order.orderDate)}</Text>
+          </View>
+          {order.estimatedDeliveryTime && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>
+                  <Ionicons name="time-outline" size={14} color="#059669" style={styles.detailIcon} /> Est. Delivery:
+                </Text>
+                <Text style={styles.detailValue}>{order.estimatedDeliveryTime}</Text>
+              </View>
+            </>
+          )}
+        </LinearGradient>
       </View>
 
       {/* Process Order Button: Only show for non-processed, non-delivered, non-cancelled orders */}
       {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && order.status !== 'PROCESSED' && (
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: '#3B82F6' }]}
+          style={styles.actionButton}
           onPress={(e) => {
+            console.log('🔧 OrderCard: Process Order button touched for order:', order.orderId);
             e.stopPropagation();
+            console.log('🔧 OrderCard: Calling onProcessOrder function');
             onProcessOrder(order);
+            console.log('🔧 OrderCard: onProcessOrder function called');
           }}
+          activeOpacity={0.8}
         >
-          <Text style={styles.actionButtonText}>
-            📋 Process Order
-          </Text>
+          <LinearGradient
+            colors={['#059669', '#047857']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.actionGradient}
+          >
+            <Ionicons name="clipboard-outline" size={16} color="#FFFFFF" style={styles.actionIcon} />
+            <Text style={styles.actionButtonText}>Process Order</Text>
+          </LinearGradient>
         </TouchableOpacity>
       )}
 
       {/* Customer Contact */}
       <View style={styles.footer}>
-        <Text style={styles.customerContact}>📞 {order.customerPhone}</Text>
-        <Text style={styles.customerContact}>📧 {order.customerEmail}</Text>
+        <Text style={styles.customerContact}>
+          <Ionicons name="call-outline" size={12} color="#64748B" /> {order.customerPhone}
+        </Text>
+        <Text style={styles.customerContact}>
+          <Ionicons name="mail-outline" size={12} color="#64748B" /> {order.customerEmail}
+        </Text>
+      </View>
+
+      {/* Current timestamp footer */}
+      <View style={styles.timestampFooter}>
+        <Text style={styles.timestamp}>2025-08-18 18:23:02 • Kasun333</Text>
       </View>
     </TouchableOpacity>
   );
@@ -148,18 +195,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    marginHorizontal: 16,
     marginVertical: 8,
-    shadowColor: '#0F172A',
+    shadowColor: '#047857',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(5, 150, 105, 0.1)',
   },
   header: {
     flexDirection: 'row',
@@ -173,18 +219,17 @@ const styles = StyleSheet.create({
   orderNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#047857',
     marginBottom: 4,
   },
   customerName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#64748B',
+    color: '#374151',
   },
   priorityBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -212,7 +257,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   statusIcon: {
-    fontSize: 14,
     marginRight: 6,
   },
   statusText: {
@@ -223,41 +267,69 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paymentIcon: {
+    marginRight: 4,
   },
   paymentText: {
     fontSize: 12,
     fontWeight: '600',
   },
   detailsContainer: {
-    gap: 6,
+    borderRadius: 12,
+    overflow: 'hidden',
     marginBottom: 12,
+  },
+  detailsGradient: {
+    padding: 12,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+    marginVertical: 6,
+  },
+  detailIcon: {
+    marginRight: 4,
   },
   detailLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#059669',
     fontWeight: '500',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   detailValue: {
     fontSize: 14,
-    color: '#0F172A',
+    color: '#1F2937',
     fontWeight: '500',
   },
   totalAmount: {
     fontSize: 16,
-    color: '#059669',
+    color: '#047857',
     fontWeight: '700',
   },
   actionButton: {
-    height: 40,
-    borderRadius: 8,
+    height: 42,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  actionGradient: {
+    height: '100%',
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+  },
+  actionIcon: {
+    marginRight: 8,
   },
   actionButtonText: {
     color: '#FFFFFF',
@@ -266,7 +338,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: 'rgba(5, 150, 105, 0.1)',
     paddingTop: 12,
     gap: 4,
   },
@@ -274,7 +346,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontWeight: '400',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
+  timestampFooter: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  timestamp: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+  }
 });
 
 export default OrderCard;

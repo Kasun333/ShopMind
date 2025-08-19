@@ -11,7 +11,10 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Order, OrderFilters } from '../../types/Order';
 import { User } from '../../types/User';
 import OrderCard from '../../components/storekeeper/OrderCard';
@@ -35,6 +38,9 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showProcessOrder, setShowProcessOrder] = useState(false);
   const [orderTab, setOrderTab] = useState<'CONFIRMED' | 'PROCESSED'>('CONFIRMED');
+
+  const currentDate = "2025-08-18 18:18:12";
+  const username = "Kasun333";
 
   useEffect(() => {
     loadOrders(orderTab);
@@ -124,8 +130,11 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
   };
 
   const handleProcessOrder = (order: Order) => {
+    console.log('🔧 Process Order button pressed for order:', order.orderId);
+    console.log('🔧 Setting showProcessOrder to true');
     setSelectedOrder(order);
     setShowProcessOrder(true);
+    console.log('🔧 State updated - showProcessOrder should be true now');
   };
 
   const handleBackFromProcess = () => {
@@ -150,7 +159,9 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
 
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>📋</Text>
+      <View style={styles.emptyIconContainer}>
+        <Ionicons name="receipt-outline" size={64} color="#059669" />
+      </View>
       <Text style={styles.emptyTitle}>No orders found</Text>
       <Text style={styles.emptySubtitle}>
         {Object.keys(filters).length > 0
@@ -162,146 +173,275 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
 
   if (loading && orders.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Loading orders...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={styles.rootContainer}>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle="light-content"
+        />
+        <LinearGradient
+          colors={['#047857', '#059669', '#10B981']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.loadingGradient}
+        >
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFFFFF" />
+            <Text style={styles.loadingText}>Loading orders...</Text>
+          </View>
+        </LinearGradient>
+      </View>
     );
   }
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="light-content"
+      />
+      {(() => {
+        console.log('🔧 Render check - showProcessOrder:', showProcessOrder, 'selectedOrder:', selectedOrder?.orderId);
+        return null;
+      })()}
       {showProcessOrder && selectedOrder ? (
-        <ProcessOrderScreen
-          user={user}
-          token={token}
-          order={selectedOrder}
-          onBack={handleBackFromProcess}
-        />
+        <>
+          {console.log('🔧 Rendering ProcessOrderScreen for order:', selectedOrder.orderId)}
+          <ProcessOrderScreen
+            user={user}
+            token={token}
+            order={selectedOrder}
+            onBack={handleBackFromProcess}
+          />
+        </>
       ) : (
-        <SafeAreaView style={styles.container}>
-          <View style={styles.content}>
-            {/* Header with Tabs */}
-            <View style={styles.header}>
-              <Text style={styles.title}>Manage Orders</Text>
-              <View style={styles.tabsContainer}>
-                <TouchableOpacity
-                  style={[styles.tab, orderTab === 'CONFIRMED' && styles.tabActive]}
-                  onPress={() => setOrderTab('CONFIRMED')}
-                >
-                  <Text style={[styles.tabText, orderTab === 'CONFIRMED' && styles.tabTextActive]}>
-                    Confirmed
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.tab, orderTab === 'PROCESSED' && styles.tabActive]}
-                  onPress={() => setOrderTab('PROCESSED')}
-                >
-                  <Text style={[styles.tabText, orderTab === 'PROCESSED' && styles.tabTextActive]}>
-                    Processed
-                  </Text>
-                </TouchableOpacity>
+        <View style={styles.rootContainer}>
+          {/* Full-screen gradient background for header */}
+          <LinearGradient
+            colors={['#047857', '#059669', '#10B981']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerGradient}
+          />
+
+          <SafeAreaView style={styles.container}>
+            <View style={styles.content}>
+              {/* Header with Tabs */}
+              <View style={styles.header}>
+                <View style={styles.headerTop}>
+                  <View>
+                    <Text style={styles.title}>Manage Orders</Text>
+                    <Text style={styles.subtitle}>
+                      {filteredOrders.length} of {orders.length} orders
+                    </Text>
+                  </View>
+
+                  <View style={styles.dateContainer}>
+                    <Text style={styles.dateText}>
+                      <Ionicons name="time-outline" size={12} color="rgba(255, 255, 255, 0.8)" /> {currentDate}
+                    </Text>
+                    <Text style={styles.usernameText}>
+                      <Ionicons name="person-outline" size={12} color="rgba(255, 255, 255, 0.8)" /> {username}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.tabsContainer}>
+                  <TouchableOpacity
+                    style={[styles.tab, orderTab === 'CONFIRMED' && styles.tabActive]}
+                    onPress={() => setOrderTab('CONFIRMED')}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons 
+                      name="timer-outline" 
+                      size={18} 
+                      color={orderTab === 'CONFIRMED' ? "#FFFFFF" : "rgba(255, 255, 255, 0.8)"} 
+                      style={styles.tabIcon}
+                    />
+                    <Text style={[styles.tabText, orderTab === 'CONFIRMED' && styles.tabTextActive]}>
+                      Confirmed
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tab, orderTab === 'PROCESSED' && styles.tabActive]}
+                    onPress={() => setOrderTab('PROCESSED')}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons 
+                      name="checkmark-circle-outline" 
+                      size={18} 
+                      color={orderTab === 'PROCESSED' ? "#FFFFFF" : "rgba(255, 255, 255, 0.8)"} 
+                      style={styles.tabIcon}
+                    />
+                    <Text style={[styles.tabText, orderTab === 'PROCESSED' && styles.tabTextActive]}>
+                      Processed
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <Text style={styles.subtitle}>
-                {filteredOrders.length} of {orders.length} orders
-              </Text>
+
+              {/* Content Area */}
+              <View style={styles.mainContent}>
+                {/* Filters */}
+                <OrderFilter filters={filters} onFiltersChange={setFilters} />
+
+                {/* Orders List */}
+                <FlatList
+                  data={filteredOrders}
+                  renderItem={renderOrderItem}
+                  keyExtractor={(item) => item.orderId.toString()}
+                  style={styles.list}
+                  contentContainerStyle={[
+                    styles.listContentContainer,
+                    filteredOrders.length === 0 && styles.emptyListContainer
+                  ]}
+                  showsVerticalScrollIndicator={false}
+                  refreshControl={
+                    <RefreshControl 
+                      refreshing={refreshing} 
+                      onRefresh={onRefresh}
+                      colors={['#059669']}
+                      tintColor="#059669"
+                    />
+                  }
+                  ListEmptyComponent={renderEmptyList}
+                />
+              </View>
             </View>
-
-            {/* Filters */}
-            <OrderFilter filters={filters} onFiltersChange={setFilters} />
-
-            {/* Orders List */}
-            <FlatList
-              data={filteredOrders}
-              renderItem={renderOrderItem}
-              keyExtractor={(item) => item.orderId.toString()}
-              style={styles.list}
-              contentContainerStyle={filteredOrders.length === 0 ? styles.emptyListContainer : undefined}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-              }
-              ListEmptyComponent={renderEmptyList}
-            />
-          </View>
-        </SafeAreaView>
+          </SafeAreaView>
+        </View>
       )}
     </>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  rootContainer: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  headerGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '25%',
+  },
+  loadingGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  container: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   content: {
     flex: 1,
   },
   header: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748B',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  dateContainer: {
+    alignItems: 'flex-end',
+  },
+  dateText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 4,
+  },
+  usernameText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   tabsContainer: {
     flexDirection: 'row',
-    marginTop: 12,
-    marginBottom: 8,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    overflow: 'hidden',
-    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 4,
+    alignSelf: 'stretch',
   },
   tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 24,
-    backgroundColor: '#F3F4F6',
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabActive: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  tabIcon: {
+    marginRight: 6,
   },
   tabText: {
-    fontSize: 16,
-    color: '#374151',
-    fontWeight: '600',
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
   },
   tabTextActive: {
     color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  mainContent: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -20,
+    paddingTop: 20,
+    overflow: 'hidden',
   },
   list: {
     flex: 1,
+    paddingHorizontal: 16,
+  },
+  listContentContainer: {
+    paddingBottom: 20,
   },
   emptyListContainer: {
     flexGrow: 1,
+    justifyContent: 'center',
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
+    paddingVertical: 60,
   },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#374151',
+    color: '#047857',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -312,14 +452,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 16,
     fontSize: 16,
-    color: '#64748B',
+    color: '#FFFFFF',
+    fontWeight: '500',
   },
 });
 
