@@ -18,6 +18,9 @@
         "NSLocationWhenInUseUsageDescription": "This app uses location services to help you select your address on the map.",
         "NSCameraUsageDescription": "This app uses the camera to take profile photos.",
         "NSPhotoLibraryUsageDescription": "This app accesses the photo library to select profile images."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyClDHsonGCcCblH31vvFA0vKEnDokih584"
       }
     },
     "android": {
@@ -32,7 +35,12 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
-      ]
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyClDHsonGCcCblH31vvFA0vKEnDokih584"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

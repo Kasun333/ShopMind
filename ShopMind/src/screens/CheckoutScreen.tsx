@@ -54,19 +54,34 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     setIsProcessing(true);
 
     try {
+      // Validate cart items have productIds
+      const invalidItems = cartItems.filter(item => !item.productId);
+      if (invalidItems.length > 0) {
+        console.error('Cart items missing productId:', invalidItems);
+        Alert.alert('Cart Error', 'Some items in your cart are missing product information. Please refresh and try again.');
+        return;
+      }
+
       // Step 1: Create payment intent on backend
       const paymentRequest: CreatePaymentIntentRequest = {
         amount: Math.round(cartSummary.total * 100), // Convert to cents
         currency: 'usd',
         customerId: parseInt(user.id),
-        items: cartItems.map(item => ({
+        orderItems: cartItems.map(item => ({
           productId: item.productId,
+          barcode: item.productId.toString(), // Use productId as barcode if not available
           quantity: item.quantity,
-          price: item.price,
+          unitPrice: item.price,
         })),
       };
 
       console.log('Creating payment intent with request:', paymentRequest);
+      console.log('Cart items with orderItems mapping:', cartItems.map(item => ({ 
+        name: item.name, 
+        productId: item.productId, 
+        quantity: item.quantity, 
+        unitPrice: item.price 
+      })));
 
       const paymentIntentResult = await stripeService.createPaymentIntent(paymentRequest);
 

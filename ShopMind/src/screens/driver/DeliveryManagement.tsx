@@ -14,6 +14,7 @@ import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { DeliveryOrder, RouteInfo } from '../../types/Driver';
+import { GOOGLE_MAPS_API_KEY } from '@env';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,7 +35,82 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
 
   useEffect(() => {
     loadDeliveryData();
+    getCurrentLocation();
   }, []);
+
+  const getCurrentLocation = () => {
+    // You can integrate with React Native's Geolocation API here
+    // For now, using Colombo as default location
+    setCurrentLocation({
+      latitude: 6.9271,
+      longitude: 79.8612,
+    });
+  };
+
+  // Google Directions API integration
+  const getOptimizedRoute = async (destinations: Array<{latitude: number, longitude: number}>) => {
+    try {
+      if (!GOOGLE_MAPS_API_KEY) {
+        console.warn('Google Maps API key not found. Using mock route data.');
+        return generateMockRouteInfo();
+      }
+
+      const origin = `${currentLocation.latitude},${currentLocation.longitude}`;
+      const waypoints = destinations.map(dest => `${dest.latitude},${dest.longitude}`).join('|');
+      
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destinations[destinations.length - 1].latitude},${destinations[destinations.length - 1].longitude}&waypoints=optimize:true|${waypoints}&key=${GOOGLE_MAPS_API_KEY}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.status === 'OK') {
+        const route = data.routes[0];
+        const optimizedRoute: Array<{latitude: number, longitude: number}> = route.legs.map((leg: any) => ({
+          latitude: leg.end_location.lat,
+          longitude: leg.end_location.lng,
+        }));
+        
+        const totalDistance = route.legs.reduce((total: number, leg: any) => total + leg.distance.value, 0);
+        const totalDuration = route.legs.reduce((total: number, leg: any) => total + leg.duration.value, 0);
+        
+        return {
+          optimizedRoute: [
+            { ...currentLocation, orderId: 'driver_location' },
+            ...optimizedRoute.map((point: {latitude: number, longitude: number}, index: number) => ({
+              ...point,
+              orderId: destinations[index] ? orders.find(order => 
+                order.coordinates.latitude === destinations[index].latitude && 
+                order.coordinates.longitude === destinations[index].longitude
+              )?.id || `point_${index}` : `point_${index}`
+            }))
+          ],
+          totalDistance: Math.round(totalDistance / 1000), // Convert to km
+          estimatedTime: Math.round(totalDuration / 60), // Convert to minutes
+          currentOrderIndex: 0,
+          orders: orders,
+        };
+      } else {
+        console.error('Google Directions API error:', data.status);
+        return generateMockRouteInfo();
+      }
+    } catch (error) {
+      console.error('Error fetching route:', error);
+      return generateMockRouteInfo();
+    }
+  };
+
+  const generateMockRouteInfo = (): RouteInfo => {
+    return {
+      optimizedRoute: [
+        { ...currentLocation, orderId: 'driver_location' },
+        ...orders.map(order => ({ ...order.coordinates, orderId: order.id }))
+      ],
+      totalDistance: orders.reduce((total, order) => total + order.distance, 0),
+      estimatedTime: orders.length * 15, // 15 minutes per delivery
+      currentOrderIndex: 0,
+      orders: orders,
+    };
+  };
 
   const loadDeliveryData = () => {
     // Hardcoded delivery data
@@ -118,6 +194,27 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
     };
 
     setRouteInfo(route);
+  };
+
+  const handleOptimizeRoute = async () => {
+    if (orders.length === 0) {
+      Alert.alert('No Orders', 'There are no orders to optimize.');
+      return;
+    }
+
+    try {
+      const destinations = orders.map(order => order.coordinates);
+      const optimizedRoute = await getOptimizedRoute(destinations);
+      setRouteInfo(optimizedRoute);
+      
+      Alert.alert(
+        'Route Optimized!', 
+        `Total distance: ${optimizedRoute.totalDistance}km\nEstimated time: ${optimizedRoute.estimatedTime} minutes`
+      );
+    } catch (error) {
+      console.error('Error optimizing route:', error);
+      Alert.alert('Error', 'Failed to optimize route. Using default route.');
+    }
   };
 
   const handleStartDelivery = (order: DeliveryOrder) => {
@@ -214,6 +311,7 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
     return orders.findIndex(order => order.status === 'in_progress');
   };
 
+  // Calculate derived values for rendering
   const nextDeliveryDistance = getNextDeliveryDistance();
   const currentOrderIndex = getCurrentOrderIndex();
   const nextOrder = orders.find(order => order.status === 'pending');
@@ -343,6 +441,13 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
             }}
           >
             <Ionicons name="resize" size={20} color="#3B82F6" />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.mapControlButton, styles.optimizeButton]}
+            onPress={handleOptimizeRoute}
+          >
+            <Ionicons name="analytics" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -566,6 +671,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+  },
+  optimizeButton: {
+    backgroundColor: '#10B981',
   },
   currentLocationMarker: {
     backgroundColor: '#3B82F6',

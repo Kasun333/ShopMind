@@ -8,6 +8,7 @@ import AccountScreen from './AccountScreen';
 import ProductDetailScreen from './ProductDetailScreen';
 import { User } from '../types/User';
 import { Product, Category } from '../types/Product';
+import { useCart } from '../hooks/useCart';
 
 const { width } = Dimensions.get('window');
 
@@ -23,9 +24,11 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [cartItems, setCartItems] = useState<number>(0);
   const [currentScreen, setCurrentScreen] = useState<'home' | 'product-detail'>('home');
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+
+  // Use cart hook for proper cart management
+  const { addToCart: addToCartService, getCartItemCount } = useCart();
 
   const categories: Category[] = [
     { id: 1, name: 'Electronics', icon: '📱' },
@@ -36,7 +39,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     { id: 6, name: 'Food', icon: '🍔' },
   ];
 
-  const BASE_URL = 'http://10.59.35.210:8082';
+  const BASE_URL = 'http://192.168.43.229:8083';
 
   // Fetch all products
   const fetchProducts = async () => {
@@ -107,9 +110,18 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     }
   };
 
-  const addToCart = (product: Product) => {
-    setCartItems(prev => prev + 1);
-    Alert.alert('Added to Cart', `${product.name} has been added to your cart!`);
+  const addToCart = async (product: Product) => {
+    try {
+      const result = await addToCartService(product, 1);
+      if (result.success) {
+        Alert.alert('Added to Cart', result.message);
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      Alert.alert('Error', 'Failed to add item to cart');
+    }
   };
 
   const navigateToProductDetail = (productId: number) => {
@@ -144,7 +156,6 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
               user={user}
               token={token}
               onBack={navigateBackToHome}
-              onAddToCart={addToCart}
             />
           );
         }
@@ -266,9 +277,9 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
           end={{ x: 1, y: 1 }}
         >
           <Text style={styles.cartIcon}>🛒</Text>
-          {cartItems > 0 && (
+          {getCartItemCount() > 0 && (
             <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{cartItems}</Text>
+              <Text style={styles.cartBadgeText}>{getCartItemCount()}</Text>
             </View>
           )}
         </LinearGradient>

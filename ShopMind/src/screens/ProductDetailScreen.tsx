@@ -25,7 +25,6 @@ interface ProductDetailScreenProps {
   user: User;
   token: string;
   onBack: () => void;
-  onAddToCart: (product: Product) => void;
 }
 
 const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
@@ -48,7 +47,7 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     isLoading: cartLoading 
   } = useCart();
 
-  const BASE_URL = 'http://10.59.35.210:8090';
+  const BASE_URL = 'http://192.168.193.210:8083';
 
   // Test network connectivity
   const testNetworkConnectivity = async () => {
@@ -102,9 +101,17 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         console.log('Raw response text:', responseText);
         
         try {
-          const data: Product = JSON.parse(responseText);
+          const data: any = JSON.parse(responseText);
           console.log('Product data parsed:', data);
-          setProduct(data);
+          
+          // Map id to productId for consistency with frontend Product interface
+          const mappedProduct: Product = {
+            ...data,
+            productId: data.id || data.productId
+          };
+          
+          console.log('Mapped product with productId:', mappedProduct);
+          setProduct(mappedProduct);
         } catch (parseError) {
           console.error('JSON parsing error:', parseError);
           Alert.alert('Error', 'Invalid response format from server');
