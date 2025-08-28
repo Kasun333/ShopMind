@@ -46,7 +46,7 @@ export const useCart = (): UseCartReturn => {
   const addToCart = async (product: Product, quantity: number = 1): Promise<{ success: boolean; message: string }> => {
     setIsLoading(true);
     try {
-      const result = cartService.addToCart(product, quantity);
+      const result = await cartService.addToCart(product, quantity);
       return result;
     } catch (error) {
       console.error('Error in addToCart hook:', error);

@@ -93,15 +93,25 @@ class CartService {
         return { success: false, message: 'Invalid product or quantity' };
       }
 
+      // Ensure productId is defined
+      if (!product.productId) {
+        console.error('Product missing productId:', product);
+        return { success: false, message: 'Product ID is missing' };
+      }
+
       // Check stock availability
       if (product.stock === 0) {
         return { success: false, message: 'Product is out of stock' };
       }
 
+      console.log('Adding to cart:', { productId: product.productId, quantity, currentCartItems: this.cartItems.length });
+
       // Find existing item in cart
       const existingItemIndex = this.cartItems.findIndex(
         item => item.productId === product.productId
       );
+
+      console.log('Existing item index:', existingItemIndex, 'for productId:', product.productId);
 
       if (existingItemIndex >= 0) {
         // Update existing item
@@ -121,6 +131,8 @@ class CartService {
           quantity: newQuantity,
           stock: product.stock // Update stock info
         };
+        
+        console.log('Updated existing item quantity to:', newQuantity);
       } else {
         // Add new item
         if (quantity > product.stock) {
@@ -142,6 +154,7 @@ class CartService {
         };
 
         this.cartItems.push(cartItem);
+        console.log('Added new item to cart:', cartItem);
       }
 
       await this.saveToStorage();
@@ -243,13 +256,17 @@ class CartService {
 
   // Check if product is in cart
   isProductInCart(productId: number): boolean {
-    return this.cartItems.some(item => item.productId === productId);
+    const result = this.cartItems.some(item => item.productId === productId);
+    console.log(`Checking if product ${productId} is in cart:`, result, 'Cart items:', this.cartItems.map(item => ({ id: item.id, productId: item.productId, name: item.name })));
+    return result;
   }
 
   // Get quantity of specific product in cart
   getProductQuantityInCart(productId: number): number {
     const item = this.cartItems.find(item => item.productId === productId);
-    return item ? item.quantity : 0;
+    const quantity = item ? item.quantity : 0;
+    console.log(`Getting quantity for product ${productId}:`, quantity);
+    return quantity;
   }
 
   // Get total number of items in cart (for badge)
