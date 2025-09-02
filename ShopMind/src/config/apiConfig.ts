@@ -9,7 +9,7 @@ export const API_CONFIG = {
     BASE_URL: '',
   },
   ORDER_SERVICE: {
-    PORT: '8090', 
+    PORT: '8084', 
     BASE_URL: '',
   },
   PAYMENT_SERVICE: {
