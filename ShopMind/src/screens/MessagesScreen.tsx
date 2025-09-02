@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import UserOrdersComponent from '../components/UserOrdersComponent';
 
 const { width } = Dimensions.get('window');
 
@@ -17,6 +18,8 @@ interface MessagesScreenProps {
 }
 
 const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
+  const [activeTab, setActiveTab] = useState<'messages' | 'orders'>('messages');
+  
   const conversations = [
     {
       id: '1',
@@ -62,98 +65,134 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
         style={styles.headerGradient}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Messages</Text>
-          <Text style={styles.subtitle}>Stay connected with stores and support</Text>
+          <Text style={styles.title}>Messages & Orders</Text>
+          <Text style={styles.subtitle}>Stay connected and track your purchases</Text>
+        </View>
+        
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'messages' && styles.activeTab]}
+            onPress={() => setActiveTab('messages')}
+          >
+            <Ionicons 
+              name="chatbubble-outline" 
+              size={20} 
+              color={activeTab === 'messages' ? '#FFFFFF' : 'rgba(255,255,255,0.7)'} 
+            />
+            <Text style={[styles.tabText, activeTab === 'messages' && styles.activeTabText]}>
+              Messages
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'orders' && styles.activeTab]}
+            onPress={() => setActiveTab('orders')}
+          >
+            <Ionicons 
+              name="cube-outline" 
+              size={20} 
+              color={activeTab === 'orders' ? '#FFFFFF' : 'rgba(255,255,255,0.7)'} 
+            />
+            <Text style={[styles.tabText, activeTab === 'orders' && styles.activeTabText]}>
+              My Orders
+            </Text>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.conversationsList}>
-          {conversations.map((conversation) => (
-            <TouchableOpacity 
-              key={conversation.id} 
-              style={[styles.conversationCard, conversation.unread > 0 && styles.conversationCardUnread]}
-              activeOpacity={0.7}
-            >
-              <View style={styles.avatarContainer}>
-                <View style={[
-                  styles.avatarBackground,
-                  conversation.unread > 0 ? styles.avatarBackgroundUnread : null
-                ]}>
-                  <Ionicons 
-                    name={conversation.icon as any} 
-                    size={24} 
-                    color={conversation.unread > 0 ? "#FFFFFF" : "#2A7CC7"} 
-                  />
-                </View>
-                {conversation.unread > 0 && (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadCount}>{conversation.unread}</Text>
+      {/* Content Area */}
+      {activeTab === 'messages' ? (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.conversationsList}>
+            {conversations.map((conversation) => (
+              <TouchableOpacity 
+                key={conversation.id} 
+                style={[styles.conversationCard, conversation.unread > 0 && styles.conversationCardUnread]}
+                activeOpacity={0.7}
+              >
+                <View style={styles.avatarContainer}>
+                  <View style={[
+                    styles.avatarBackground,
+                    conversation.unread > 0 ? styles.avatarBackgroundUnread : null
+                  ]}>
+                    <Ionicons 
+                      name={conversation.icon as any} 
+                      size={24} 
+                      color={conversation.unread > 0 ? "#FFFFFF" : "#2A7CC7"} 
+                    />
                   </View>
-                )}
-              </View>
-              
-              <View style={styles.conversationContent}>
-                <View style={styles.conversationHeader}>
-                  <Text style={styles.conversationName}>{conversation.name}</Text>
-                  <Text style={styles.conversationTime}>{conversation.time}</Text>
+                  {conversation.unread > 0 && (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadCount}>{conversation.unread}</Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={[
-                  styles.lastMessage,
-                  conversation.unread > 0 && styles.unreadMessage
-                ]}>
-                  {conversation.lastMessage}
-                </Text>
+                
+                <View style={styles.conversationContent}>
+                  <View style={styles.conversationHeader}>
+                    <Text style={styles.conversationName}>{conversation.name}</Text>
+                    <Text style={styles.conversationTime}>{conversation.time}</Text>
+                  </View>
+                  <Text style={[
+                    styles.lastMessage,
+                    conversation.unread > 0 && styles.unreadMessage
+                  ]}>
+                    {conversation.lastMessage}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            
+            <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
+              <LinearGradient
+                colors={['rgba(42, 124, 199, 0.15)', 'rgba(30, 96, 145, 0.1)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIconContainer}
+              >
+                <Ionicons name="help-buoy-outline" size={24} color="#2A7CC7" />
+              </LinearGradient>
+              <View style={styles.actionContent}>
+                <Text style={styles.actionTitle}>Contact Support</Text>
+                <Text style={styles.actionSubtitle}>Get help with your orders or account</Text>
               </View>
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
             </TouchableOpacity>
-          ))}
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          
-          <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-            <LinearGradient
-              colors={['rgba(42, 124, 199, 0.15)', 'rgba(30, 96, 145, 0.1)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionIconContainer}
-            >
-              <Ionicons name="help-buoy-outline" size={24} color="#2A7CC7" />
-            </LinearGradient>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Contact Support</Text>
-              <Text style={styles.actionSubtitle}>Get help with your orders or account</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
+              <LinearGradient
+                colors={['rgba(42, 124, 199, 0.15)', 'rgba(30, 96, 145, 0.1)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIconContainer}
+              >
+                <Ionicons name="chatbubble-outline" size={24} color="#2A7CC7" />
+              </LinearGradient>
+              <View style={styles.actionContent}>
+                <Text style={styles.actionTitle}>Start New Chat</Text>
+                <Text style={styles.actionSubtitle}>Connect with stores directly</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-            <LinearGradient
-              colors={['rgba(42, 124, 199, 0.15)', 'rgba(30, 96, 145, 0.1)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionIconContainer}
-            >
-              <Ionicons name="chatbubble-outline" size={24} color="#2A7CC7" />
-            </LinearGradient>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Start New Chat</Text>
-              <Text style={styles.actionSubtitle}>Connect with stores directly</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.statusInfo}>
-          <Text style={styles.statusText}>
-            <Ionicons name="time-outline" size={12} color="#64748B" /> Last updated: 2025-08-18 17:22:44
-          </Text>
-          <Text style={styles.statusText}>
-            <Ionicons name="person-outline" size={12} color="#64748B" /> {user.username}
-          </Text>
-        </View>
-      </ScrollView>
+          <View style={styles.statusInfo}>
+            <Text style={styles.statusText}>
+              <Ionicons name="time-outline" size={12} color="#64748B" /> Last updated: 2025-09-02 10:22:44
+            </Text>
+          </View>
+        </ScrollView>
+      ) : (
+        <UserOrdersComponent 
+          userId={parseInt(user.id)} 
+          token={token} 
+        />
+      )}
 
       {/* Floating Action Button */}
       <TouchableOpacity style={styles.fab} activeOpacity={0.8}>
@@ -195,6 +234,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '400',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginTop: 20,
+    marginHorizontal: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  activeTab: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginLeft: 6,
+  },
+  activeTabText: {
+    color: '#FFFFFF',
   },
   content: {
     flex: 1,
