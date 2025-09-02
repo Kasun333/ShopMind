@@ -13,6 +13,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ECOMMERCE_API_URL } from '../config/apiConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { Product } from '../types/Product';
 import { User } from '../types/User';
@@ -47,7 +48,7 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     isLoading: cartLoading 
   } = useCart();
 
-  const BASE_URL = 'http://192.168.193.210:8083';
+  const BASE_URL = ECOMMERCE_API_URL;
 
   // Test network connectivity
   const testNetworkConnectivity = async () => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Dimensions, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { User } from '../types/User';
+import { AuthService } from '../services/authService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -40,44 +41,33 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
   };
 
   const handleLogin = async () => {
-    if (!username || !password) {
+    // Trim whitespace from inputs
+    const cleanUsername = username.trim();
+    const cleanPassword = password.trim();
+    
+    if (!cleanUsername || !cleanPassword) {
       showToast('Please enter both username and password', 'error');
       return;
     }
 
     try {
-      const response = await fetch('http://192.168.43.229:8080/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await response.json();
-      console.log('Response data:', data);
-      console.log('Success value:', data.success);
-      console.log('Success type:', typeof data.success);
-
-      if (!response.ok) {
-        showToast(data.message || 'Invalid credentials', 'error');
-        return;
-      }
-
-      // Check if login was successful
-      if (data.success === true) {
-        // Handle success - call onLogin with user data and token
-        showToast(`Welcome ${data.user.fullName}`, 'success');
-        console.log('Token:', data.token); // store this securely later
-        console.log('User data:', data.user);
+      console.log('LoginScreen - Attempting login with:', { username: cleanUsername, password: cleanPassword });
+      const result = await AuthService.login({ username: cleanUsername, password: cleanPassword });
+      console.log('LoginScreen - AuthService result:', result);
+      
+      if (result.success && result.user && result.token) {
+        showToast(`Welcome ${result.user.fullName}`, 'success');
+        console.log('Token:', result.token);
+        console.log('User data:', result.user);
         
         // Navigate to appropriate screen based on role
-        onLogin(data.user, data.token);
+        onLogin(result.user, result.token);
       } else {
-        showToast(data.message || 'Something went wrong', 'error');
+        console.log('LoginScreen - Login failed. Success:', result.success, 'User:', !!result.user, 'Token:', !!result.token);
+        showToast(result.message || 'Something went wrong', 'error');
       }
     } catch (error) {
-      console.error(error);
+      console.error('Login error:', error);
       showToast('Could not connect to server', 'error');
     }
   };
