@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { EMAIL_VERIFIER_API_KEY } from '@env';
 import LocationPickerModal from '../components/LocationPickerModal';
 import ImagePickerComponent from '../components/ImagePickerComponent';
+import { AuthService } from '../services/authService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -96,13 +97,9 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
 
     setIsVerifyingEmail(true);
     try {
-      const url = `https://emailvalidation.abstractapi.com/v1/?api_key=${EMAIL_VERIFIER_API_KEY}&email=${email}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      console.log('Email verification response:', data);
-
-      if (data.deliverability === 'DELIVERABLE') {
+      const isValid = await AuthService.validateEmail(email);
+      
+      if (isValid) {
         setIsEmailVerified(true);
         showToast('Email verified successfully!', 'success');
       } else {
@@ -240,103 +237,28 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     setIsLoading(true);
     
     try {
-      const requestBody = {
-        ...formData,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : 6.9271,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : 79.8612,
-        profileImageUrl: formData.profileImageUrl || "https://example.com/profile.jpg"
+      const signupData = {
+        fullName: formData.fullName,
+        email: formData.email,
+        username: formData.username,
+        password: formData.password,
+        phoneNumber: formData.phoneNumber,
+        dateOfBirth: formData.dateOfBirth,
+        role: "Customer", // Default role for now
+        latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
+        profileImageUrl: formData.profileImageUrl,
       };
       
-      console.log('Signup request body:', JSON.stringify(requestBody, null, 2));
+      const result = await AuthService.signup(signupData);
       
-      const response = await fetch('http://192.168.43.229:8080/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-      
-      const contentType = response.headers.get('content-type');
-      console.log('Content-Type:', contentType);
-      
-      let data;
-      try {
-        const responseText = await response.text();
-        console.log('Raw response text:', responseText);
-        
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            data = JSON.parse(responseText);
-          } catch (jsonError) {
-            console.log('Failed to parse JSON, treating as plain text:', responseText);
-            // Backend sent content-type as JSON but response is plain text
-            if (response.ok && responseText.includes('successfully')) {
-              showToast('Account created successfully! Please login.', 'success');
-              setTimeout(() => {
-                onSignupSuccess();
-              }, 2000);
-              return;
-            } else {
-              showToast(responseText || `Request failed with status ${response.status}`, 'error');
-              return;
-            }
-          }
-        } else {
-          console.log('Server returned plain text:', responseText);
-          
-          if (response.status === 403) {
-            console.log('Got 403 but backend logs show success - treating as successful signup');
-            showToast('Account created successfully! Please login.', 'success');
-            setTimeout(() => {
-              onSignupSuccess();
-            }, 2000);
-            return;
-          } else if (response.status === 404) {
-            showToast('Signup endpoint not found. Please check the server configuration.', 'error');
-            return;
-          } else if (response.status >= 500) {
-            showToast('Server error. Please try again later.', 'error');
-            return;
-          }
-          
-          if (response.ok && responseText.includes('successfully')) {
-            showToast('Account created successfully! Please login.', 'success');
-            setTimeout(() => {
-              onSignupSuccess();
-            }, 2000);
-            return;
-          } else {
-            showToast(responseText || `Request failed with status ${response.status}`, 'error');
-            return;
-          }
-        }
-      } catch (parseError) {
-        console.error('Response processing error:', parseError);
-        showToast('Server returned invalid response', 'error');
-        return;
-      }
-
-      console.log('Parsed signup response:', data);
-
-      if (!response.ok) {
-        showToast(data.message || 'Signup failed', 'error');
-        return;
-      }
-
-      if (data.success || response.status === 201 || response.ok) {
+      if (result.success) {
         showToast('Account created successfully! Please login.', 'success');
         setTimeout(() => {
           onSignupSuccess();
         }, 2000);
       } else {
-        showToast(data.message || 'Something went wrong', 'error');
+        showToast(result.message || 'Signup failed', 'error');
       }
     } catch (error) {
       console.error('Signup error:', error);

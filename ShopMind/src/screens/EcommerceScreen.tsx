@@ -9,6 +9,7 @@ import ProductDetailScreen from './ProductDetailScreen';
 import { User } from '../types/User';
 import { Product, Category } from '../types/Product';
 import { useCart } from '../hooks/useCart';
+import { ECOMMERCE_API_URL } from '../config/apiConfig';
 
 const { width } = Dimensions.get('window');
 
@@ -39,7 +40,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     { id: 6, name: 'Food', icon: '🍔' },
   ];
 
-  const BASE_URL = 'http://192.168.43.229:8083';
+  const BASE_URL = ECOMMERCE_API_URL;
 
   // Fetch all products
   const fetchProducts = async () => {

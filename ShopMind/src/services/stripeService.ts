@@ -25,6 +25,8 @@ export interface PaymentIntent {
   status: string;
 }
 
+import { PAYMENT_API_URL } from '../config/apiConfig';
+
 export interface CreatePaymentIntentRequest {
   amount: number; // in cents
   currency: string;
@@ -48,7 +50,7 @@ export interface CreatePaymentIntentResponse {
 export class StripeService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://192.168.43.229:8084') {
+  constructor(baseUrl: string = PAYMENT_API_URL) {
     this.baseUrl = baseUrl;
   }
 
