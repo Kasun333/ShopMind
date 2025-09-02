@@ -25,8 +25,21 @@ interface SignupScreenProps {
   onBackToLogin: () => void;
 }
 
+type FormDataType = {
+  username: string;
+  email: string;
+  password: string;
+  fullName: string;
+  phoneNumber: string;
+  profileImageUrl: string;
+  latitude: string;
+  longitude: string;
+  formattedAddress: string;
+  dateOfBirth: string;
+};
+
 const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLogin }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataType>({
     username: '',
     email: '',
     password: '',
@@ -67,23 +80,23 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     });
   };
 
-  const updateField = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Reset email verification when email changes
-    if (field === 'email') {
-      setIsEmailVerified(false);
-    }
-  };
-
   const verifyEmail = async () => {
-    if (!formData.email.trim() || !formData.email.includes('@')) {
+    const email = formData.email.trim();
+    
+    if (!email) {
+      showToast('Please enter an email address', 'error');
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       showToast('Please enter a valid email address', 'error');
       return;
     }
 
     setIsVerifyingEmail(true);
     try {
-      const url = `https://emailvalidation.abstractapi.com/v1/?api_key=${EMAIL_VERIFIER_API_KEY}&email=${formData.email}`;
+      const url = `https://emailvalidation.abstractapi.com/v1/?api_key=${EMAIL_VERIFIER_API_KEY}&email=${email}`;
       const response = await fetch(url);
       const data = await response.json();
 
@@ -126,43 +139,95 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
   const validateForm = () => {
     const { username, email, password, fullName, phoneNumber, formattedAddress, dateOfBirth } = formData;
     
+    // Full name validation
+    if (!fullName.trim()) {
+      showToast('Full name is required', 'error');
+      return false;
+    }
+    if (fullName.trim().length < 2) {
+      showToast('Full name must be at least 2 characters', 'error');
+      return false;
+    }
+    
+    // Username validation
     if (!username.trim()) {
       showToast('Username is required', 'error');
       return false;
     }
-    
-    if (!email.trim() || !email.includes('@')) {
-      showToast('Valid email is required', 'error');
+    if (username.trim().length < 3) {
+      showToast('Username must be at least 3 characters', 'error');
       return false;
     }
-
+    if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
+      showToast('Username can only contain letters, numbers, and underscores', 'error');
+      return false;
+    }
+    
+    // Email validation
+    if (!email.trim()) {
+      showToast('Email is required', 'error');
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      showToast('Please enter a valid email address', 'error');
+      return false;
+    }
     if (!isEmailVerified) {
       showToast('Please verify your email address first', 'error');
       return false;
     }
     
-    if (!password.trim() || password.length < 6) {
-      showToast('Password must be at least 6 characters', 'error');
-      return false;
-    }
-    
-    if (!fullName.trim()) {
-      showToast('Full name is required', 'error');
-      return false;
-    }
-    
+    // Phone number validation
     if (!phoneNumber.trim()) {
       showToast('Phone number is required', 'error');
       return false;
     }
+    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    if (!phoneRegex.test(phoneNumber.replace(/[\s\-\(\)]/g, ''))) {
+      showToast('Please enter a valid phone number', 'error');
+      return false;
+    }
     
+    // Password validation
+    if (!password.trim()) {
+      showToast('Password is required', 'error');
+      return false;
+    }
+    if (password.length < 6) {
+      showToast('Password must be at least 6 characters', 'error');
+      return false;
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      showToast('Password must contain at least one uppercase letter, one lowercase letter, and one number', 'error');
+      return false;
+    }
+    
+    // Address validation
     if (!formattedAddress.trim()) {
       showToast('Address is required', 'error');
       return false;
     }
+    if (formattedAddress.trim().length < 10) {
+      showToast('Please enter a complete address', 'error');
+      return false;
+    }
     
+    // Date of birth validation
     if (!dateOfBirth.trim()) {
       showToast('Date of birth is required', 'error');
+      return false;
+    }
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dateOfBirth.trim())) {
+      showToast('Date of birth must be in YYYY-MM-DD format', 'error');
+      return false;
+    }
+    const birthDate = new Date(dateOfBirth.trim());
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    if (age < 13 || age > 120) {
+      showToast('You must be between 13 and 120 years old', 'error');
       return false;
     }
     
@@ -283,7 +348,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
 
   const renderInput = (
     label: string,
-    field: string,
+    field: keyof FormDataType,
     placeholder: string,
     iconName: string,
     keyboardType: any = 'default',
@@ -296,18 +361,31 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
         focusedInput === field && styles.inputWrapperFocused,
         field === 'email' && isEmailVerified && styles.inputWrapperVerified
       ]}>
-        <Ionicons name={iconName as any} size={18} color={focusedInput === field ? "#2A7CC7" : "#94A3B8"} style={styles.inputIcon} />
+        <Ionicons 
+          name={iconName as any} 
+          size={18} 
+          color={focusedInput === field ? "#2A7CC7" : "#94A3B8"} 
+          style={styles.inputIcon} 
+        />
         <TextInput
           style={styles.input}
           placeholder={placeholder}
           placeholderTextColor="#94A3B8"
-          value={formData[field as keyof typeof formData]}
-          onChangeText={(value) => updateField(field, value)}
+          value={formData[field]}
+          onChangeText={(text) => {
+            setFormData(prev => ({ ...prev, [field]: text }));
+            if (field === 'email') setIsEmailVerified(false);
+          }}
           onFocus={() => setFocusedInput(field)}
           onBlur={() => setFocusedInput(null)}
           keyboardType={keyboardType}
           secureTextEntry={secureTextEntry}
           autoCapitalize={field === 'email' || field === 'username' ? 'none' : 'words'}
+          autoCorrect={false}
+          editable={true}
+          selectTextOnFocus={true}
+          contextMenuHidden={false}
+          caretHidden={false}
         />
       </View>
     </View>
@@ -322,17 +400,30 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
           focusedInput === 'email' && styles.inputWrapperFocused,
           isEmailVerified && styles.inputWrapperVerified
         ]}>
-          <Ionicons name="mail-outline" size={18} color={isEmailVerified ? "#059669" : focusedInput === 'email' ? "#2A7CC7" : "#94A3B8"} style={styles.inputIcon} />
+          <Ionicons 
+            name="mail-outline" 
+            size={18} 
+            color={isEmailVerified ? "#059669" : focusedInput === 'email' ? "#2A7CC7" : "#94A3B8"} 
+            style={styles.inputIcon} 
+          />
           <TextInput
             style={styles.emailInput}
             placeholder="Enter your email address"
             placeholderTextColor="#94A3B8"
             value={formData.email}
-            onChangeText={(value) => updateField('email', value)}
+            onChangeText={(text) => {
+              setFormData(prev => ({ ...prev, email: text }));
+              setIsEmailVerified(false);
+            }}
             onFocus={() => setFocusedInput('email')}
             onBlur={() => setFocusedInput(null)}
             keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
+            editable={true}
+            selectTextOnFocus={true}
+            contextMenuHidden={false}
+            caretHidden={false}
           />
         </View>
         <TouchableOpacity
@@ -369,17 +460,29 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
           styles.addressInputWrapper,
           focusedInput === 'formattedAddress' && styles.inputWrapperFocused
         ]}>
-          <Ionicons name="location-outline" size={18} color={focusedInput === 'formattedAddress' ? "#2A7CC7" : "#94A3B8"} style={styles.inputIcon} />
+          <Ionicons 
+            name="location-outline" 
+            size={18} 
+            color={focusedInput === 'formattedAddress' ? "#2A7CC7" : "#94A3B8"} 
+            style={styles.inputIcon} 
+          />
           <TextInput
             style={styles.addressInput}
             placeholder="Enter your address or select on map"
             placeholderTextColor="#94A3B8"
             value={formData.formattedAddress}
-            onChangeText={(value) => updateField('formattedAddress', value)}
+            onChangeText={(text) => {
+              setFormData(prev => ({ ...prev, formattedAddress: text }));
+            }}
             onFocus={() => setFocusedInput('formattedAddress')}
             onBlur={() => setFocusedInput(null)}
             multiline={true}
             numberOfLines={2}
+            autoCorrect={false}
+            editable={true}
+            selectTextOnFocus={true}
+            contextMenuHidden={false}
+            caretHidden={false}
           />
         </View>
         <TouchableOpacity
@@ -402,7 +505,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Gradient Background */}
       <LinearGradient
@@ -633,15 +736,18 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     marginLeft: 16,
-    marginRight: 8,
+    marginRight: 12,
   },
   input: {
     flex: 1,
     height: 52,
-    paddingRight: 16,
+    paddingHorizontal: 12,
     fontSize: 16,
     color: '#1F2937',
     fontWeight: '500',
+    textAlignVertical: 'center',
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   emailInputRow: {
     flexDirection: 'row',
@@ -660,10 +766,13 @@ const styles = StyleSheet.create({
   emailInput: {
     flex: 1,
     height: 52,
-    paddingRight: 16,
+    paddingHorizontal: 12,
     fontSize: 16,
     color: '#1F2937',
     fontWeight: '500',
+    textAlignVertical: 'center',
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   verifyButton: {
     height: 52,
@@ -709,8 +818,8 @@ const styles = StyleSheet.create({
   addressInput: {
     flex: 1,
     minHeight: 52,
-    paddingRight: 16,
-    paddingTop: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     fontSize: 16,
     color: '#1F2937',
     fontWeight: '500',
