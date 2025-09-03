@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../../types/Order';
 import { User } from '../../types/User';
 import { orderService } from '../../services/orderService';
+import { InventoryService } from '../../services/inventoryService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -69,18 +70,58 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
     setShowBarcodeScanner(true);
   };
 
-  const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
+  const handleBarcodeScanned = async ({ type, data }: { type: string; data: string }) => {
     if (currentScanningItem != null) {
       const item = order.orderItems.find(i => i.orderItemId === currentScanningItem);
       if (!item) return;
+      
       // If barcode is null, allow any scan
       if (!item.barcode || item.barcode === data) {
+        // Update scanned state first
         setScannedItems(prev => ({ ...prev, [currentScanningItem]: true }));
         setScannedBarcodes(prev => ({ ...prev, [currentScanningItem]: data }));
         setScanError(null);
+        
+        // Show success alert
         Alert.alert('Barcode Scanned!', `Product: ${item.productName}\nBarcode: ${data}`);
+        
+        // Close scanner
         setShowBarcodeScanner(false);
         setCurrentScanningItem(null);
+        
+        // Reduce inventory if productId exists
+        if (item.productId) {
+          try {
+            console.log('Reducing inventory for product:', item.productId, 'quantity:', item.quantity);
+            const result = await InventoryService.reduceInventory(
+              item.productId, 
+              item.quantity, 
+              token
+            );
+            
+            if (result.success) {
+              console.log('Inventory reduced successfully:', result.message);
+              // Optionally show a toast or update UI to indicate inventory was reduced
+            } else {
+              console.error('Failed to reduce inventory:', result.message);
+              // Show warning but don't prevent order processing
+              Alert.alert(
+                'Inventory Warning', 
+                `Item scanned successfully but inventory update failed: ${result.message}`,
+                [{ text: 'OK' }]
+              );
+            }
+          } catch (error) {
+            console.error('Error reducing inventory:', error);
+            Alert.alert(
+              'Inventory Warning', 
+              'Item scanned successfully but inventory service is unavailable.',
+              [{ text: 'OK' }]
+            );
+          }
+        } else {
+          console.warn('No productId found for item:', item.productName);
+        }
       } else {
         setScanError(`Scanned barcode does not match for ${item.productName}.`);
       }
