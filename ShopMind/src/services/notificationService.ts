@@ -58,10 +58,13 @@ class NotificationService {
             this.stompClient?.subscribe('/user/queue/notifications', (message: Message) => {
               try {
                 const notification: Notification = JSON.parse(message.body);
-                console.log('🔔 Received notification:', notification);
+                console.log('🔔 REAL-TIME NOTIFICATION RECEIVED:', notification);
+                console.log('📱 Message body:', message.body);
+                console.log('👥 Active handlers:', this.notificationHandlers.length);
                 this.handleNotification(notification);
               } catch (error) {
                 console.error('❌ Error parsing notification:', error);
+                console.error('📨 Raw message:', message);
               }
             });
 
@@ -108,12 +111,17 @@ class NotificationService {
 
   // Handle incoming notifications
   private handleNotification(notification: Notification): void {
+    console.log('🎯 handleNotification called with:', notification);
+    console.log('📋 Number of handlers to call:', this.notificationHandlers.length);
+    
     // Call all registered notification handlers
-    this.notificationHandlers.forEach(handler => {
+    this.notificationHandlers.forEach((handler, index) => {
       try {
+        console.log(`🔄 Calling handler ${index + 1}/${this.notificationHandlers.length}`);
         handler(notification);
+        console.log(`✅ Handler ${index + 1} completed successfully`);
       } catch (error) {
-        console.error('❌ Error in notification handler:', error);
+        console.error(`❌ Error in notification handler ${index + 1}:`, error);
       }
     });
   }
@@ -133,18 +141,41 @@ class NotificationService {
 
   // Send a test notification (for development)
   sendTestNotification(message: string, type: string = 'TEST'): void {
+    console.log('🧪 Sending test notification...');
+    console.log('🔗 Connected:', this.connected);
+    console.log('🏭 STOMP Client exists:', !!this.stompClient);
+    console.log('👤 User ID:', this.userId);
+    
     if (this.stompClient && this.connected) {
       const testNotification = {
         userId: this.userId,
         message: message,
-        type: type
+        type: type,
+        timestamp: new Date().toISOString()
       };
       
-      this.stompClient.send("/app/test", {}, JSON.stringify(testNotification));
-      console.log('📤 Sent test notification:', testNotification);
+      try {
+        this.stompClient.send("/app/test", {}, JSON.stringify(testNotification));
+        console.log('📤 Test notification sent successfully:', testNotification);
+      } catch (error) {
+        console.error('❌ Error sending test notification:', error);
+      }
     } else {
-      console.warn('⚠️ Cannot send notification - not connected to WebSocket');
+      console.warn('⚠️ Cannot send notification - WebSocket not connected');
+      console.warn('  - Connected:', this.connected);
+      console.warn('  - STOMP Client:', !!this.stompClient);
     }
+  }
+
+  // Method to check connection status and debug info
+  getConnectionInfo(): any {
+    return {
+      connected: this.connected,
+      userId: this.userId,
+      stompClientExists: !!this.stompClient,
+      handlersCount: this.notificationHandlers.length,
+      connectionAttempts: this.connectionAttempts
+    };
   }
 
   // Disconnect from WebSocket
@@ -183,6 +214,46 @@ class NotificationService {
     }
 
     return this.connect(this.userId);
+  }
+
+  // Force reconnection (disconnect and reconnect)
+  forceReconnect(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.userId) {
+        reject(new Error('No user ID available for reconnection'));
+        return;
+      }
+
+      console.log('🔄 Force reconnecting WebSocket...');
+      
+      // Disconnect first
+      this.disconnect();
+      
+      // Wait a moment then reconnect
+      setTimeout(() => {
+        this.connect(this.userId!)
+          .then(() => {
+            console.log('✅ Force reconnection successful');
+            resolve();
+          })
+          .catch((error) => {
+            console.error('❌ Force reconnection failed:', error);
+            reject(error);
+          });
+      }, 1000);
+    });
+  }
+
+  // Get connection debug info
+  getConnectionDebugInfo(): string {
+    return `
+WebSocket Status: ${this.connected ? 'Connected' : 'Disconnected'}
+User ID: ${this.userId || 'None'}
+Connection Attempts: ${this.connectionAttempts}/${this.maxConnectionAttempts}
+WebSocket URL: ${WEBSOCKET_URL}
+Handlers Count: ${this.notificationHandlers.length}
+STOMP Client: ${this.stompClient ? 'Initialized' : 'Not Initialized'}
+    `.trim();
   }
 
   // API Methods for fetching and managing notifications

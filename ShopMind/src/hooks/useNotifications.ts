@@ -12,6 +12,8 @@ export interface UseNotificationsReturn {
   clearNotifications: () => void;
   clearNotification: (notificationId: number) => void;
   refreshNotifications: () => Promise<void>;
+  forceReconnect: () => Promise<void>;
+  getDebugInfo: () => string;
 }
 
 export const useNotifications = (userId: string | null, token?: string): UseNotificationsReturn => {
@@ -30,8 +32,22 @@ export const useNotifications = (userId: string | null, token?: string): UseNoti
     setIsLoading(true);
     try {
       const existingNotifications = await notificationService.getUserNotifications(userId, token);
-      setNotifications(existingNotifications);
-      console.log(`📋 Loaded ${existingNotifications.length} existing notifications`);
+      
+      // Merge with existing real-time notifications (avoid duplicates)
+      setNotifications(prev => {
+        const existingIds = prev.map(n => n.id);
+        const newNotifications = existingNotifications.filter(n => !existingIds.includes(n.id));
+        
+        const merged = [...prev, ...newNotifications];
+        
+        // Sort all notifications by timestamp (newest first)
+        const sorted = merged.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        
+        console.log(`📋 Loaded ${existingNotifications.length} from API, merged with ${prev.length} real-time. Total: ${sorted.length}`);
+        return sorted;
+      });
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {
@@ -41,14 +57,25 @@ export const useNotifications = (userId: string | null, token?: string): UseNoti
 
   // Add notification to the list
   const addNotification = (notification: Notification) => {
+    console.log('🔄 Adding notification to state:', notification);
     setNotifications(prev => {
       // Check if notification already exists to prevent duplicates
       const exists = prev.some(n => n.id === notification.id);
       if (exists) {
+        console.log('⚠️ Notification already exists, skipping:', notification.id);
         return prev;
       }
+      
+      // For real-time notifications, ensure they get a timestamp if missing
+      const notificationWithTimestamp = {
+        ...notification,
+        createdAt: notification.createdAt || new Date().toISOString()
+      };
+      
       // Add new notification to the beginning of the list (newest first)
-      const updated = [notification, ...prev];
+      const updated = [notificationWithTimestamp, ...prev];
+      
+      console.log('✅ Notification added. Total count:', updated.length);
       
       // Sort to ensure newest notifications are always at the top
       return updated.sort((a, b) => 
@@ -111,30 +138,34 @@ export const useNotifications = (userId: string | null, token?: string): UseNoti
       return;
     }
 
-    // Load existing notifications from API first
-    loadNotifications();
-
-    // Create notification handler for real-time updates
+    // Create notification handler for real-time updates FIRST
     const handleNewNotification: NotificationHandler = (notification: Notification) => {
-      console.log('📱 Received real-time notification:', notification);
+      console.log('� REAL-TIME notification received:', notification);
       addNotification(notification);
     };
 
     // Store handler reference for cleanup
     handlerRef.current = handleNewNotification;
 
-    // Add the handler
+    // Add the handler BEFORE connecting
     notificationService.addNotificationHandler(handleNewNotification);
 
-    // Connect to WebSocket for real-time updates
+    // Connect to WebSocket for real-time updates FIRST
     notificationService.connect(userId)
       .then(() => {
         console.log('✅ Successfully connected to real-time notifications');
         setConnected(true);
+        
+        // AFTER WebSocket is connected, load existing notifications
+        setTimeout(() => {
+          loadNotifications();
+        }, 1000); // Small delay to ensure WebSocket is fully established
       })
       .catch((error) => {
         console.error('❌ Failed to connect to real-time notifications:', error);
         setConnected(false);
+        // Still load existing notifications even if WebSocket fails
+        loadNotifications();
       });
 
     // Check connection status periodically
@@ -179,6 +210,21 @@ export const useNotifications = (userId: string | null, token?: string): UseNoti
     };
   }, []);
 
+  // Force reconnection function
+  const forceReconnect = async () => {
+    try {
+      await notificationService.forceReconnect();
+      setConnected(notificationService.isConnected());
+    } catch (error) {
+      console.error('Failed to force reconnect:', error);
+    }
+  };
+
+  // Get debug info
+  const getDebugInfo = () => {
+    return notificationService.getConnectionDebugInfo();
+  };
+
   return {
     notifications,
     connected,
@@ -189,7 +235,9 @@ export const useNotifications = (userId: string | null, token?: string): UseNoti
     markAllAsRead,
     clearNotifications,
     clearNotification,
-    refreshNotifications: loadNotifications
+    refreshNotifications: loadNotifications,
+    forceReconnect,
+    getDebugInfo
   };
 };
 
