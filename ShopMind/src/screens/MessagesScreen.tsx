@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import UserOrdersComponent from '../components/UserOrdersComponent';
@@ -27,12 +27,14 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
   const {
     notifications,
     connected,
+    isLoading,
     unreadCount,
     markAsRead,
     markAllAsRead,
     clearNotifications,
-    clearNotification
-  } = useNotifications(user.id);
+    clearNotification,
+    refreshNotifications
+  } = useNotifications(user.id, token);
   
   const conversations = [
     {
@@ -70,10 +72,10 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
   ];
 
   // Handle notification actions
-  const handleNotificationPress = (notification: Notification) => {
+  const handleNotificationPress = async (notification: Notification) => {
     console.log('Notification pressed:', notification);
     if (!notification.isRead) {
-      markAsRead(notification.id);
+      await markAsRead(notification.id);
     }
     
     // Add logic to navigate based on notification type
@@ -109,6 +111,23 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
     );
   };
 
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+      Alert.alert('Success', 'All notifications marked as read');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to mark notifications as read');
+    }
+  };
+
+  const handleRefreshNotifications = async () => {
+    try {
+      await refreshNotifications();
+    } catch (error) {
+      console.error('Failed to refresh notifications:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header with Gradient */}
@@ -140,7 +159,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'notifications' && styles.activeTab]}
+            style={[styles.tab, styles.notificationTab, activeTab === 'notifications' && styles.activeTab]}
             onPress={() => setActiveTab('notifications')}
           >
             <View style={styles.tabIconContainer}>
@@ -158,6 +177,11 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
             <Text style={[styles.tabText, activeTab === 'notifications' && styles.activeTabText]}>
               Notifications
             </Text>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -273,7 +297,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
               </Text>
             </View>
             {unreadCount > 0 && (
-              <TouchableOpacity onPress={markAllAsRead} style={styles.markAllReadButton}>
+              <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllReadButton}>
                 <Text style={styles.markAllReadText}>Mark all as read</Text>
               </TouchableOpacity>
             )}
@@ -294,6 +318,14 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
             </View>
             
             <View style={styles.notificationActions}>
+              <TouchableOpacity onPress={handleRefreshNotifications} style={styles.refreshButton} disabled={isLoading}>
+                <Ionicons 
+                  name={isLoading ? "refresh" : "refresh-outline"} 
+                  size={16} 
+                  color={isLoading ? "#94A3B8" : "#10B981"} 
+                />
+              </TouchableOpacity>
+              
               <TouchableOpacity onPress={sendTestNotification} style={styles.testButton}>
                 <Ionicons name="flask-outline" size={16} color="#2A7CC7" />
                 <Text style={styles.testButtonText}>Test</Text>
@@ -307,8 +339,16 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
             </View>
           </View>
 
+          {/* Loading State */}
+          {isLoading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#2A7CC7" />
+              <Text style={styles.loadingText}>Loading notifications...</Text>
+            </View>
+          )}
+
           {/* Notifications List */}
-          {notifications.length > 0 ? (
+          {!isLoading && notifications.length > 0 ? (
             <View style={styles.notificationsList}>
               {notifications.map((notification) => (
                 <NotificationCard
@@ -320,7 +360,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
                 />
               ))}
             </View>
-          ) : (
+          ) : !isLoading && (
             <View style={styles.emptyNotifications}>
               <Ionicons name="notifications-outline" size={64} color="#CBD5E1" />
               <Text style={styles.emptyNotificationsTitle}>No Notifications</Text>
@@ -410,6 +450,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
   },
+  notificationTab: {
+    position: 'relative',
+  },
   activeTab: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -421,6 +464,24 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#FFFFFF',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   content: {
     flex: 1,
@@ -704,10 +765,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 4,
   },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
   clearButton: {
     padding: 8,
     borderRadius: 20,
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
   },
   notificationsList: {
     paddingBottom: 16,
