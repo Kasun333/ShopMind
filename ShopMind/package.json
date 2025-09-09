@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.1.2",
+    "@stomp/stompjs": "^7.1.1",
     "@stripe/stripe-react-native": "0.45.0",
     "cloudinary-core": "^2.14.0",
     "expo": "~53.0.20",
@@ -23,11 +24,13 @@
     "react": "19.0.0",
     "react-native": "0.79.5",
     "react-native-dotenv": "^3.4.11",
-    "react-native-maps": "^1.20.1"
+    "react-native-maps": "^1.20.1",
+    "sockjs-client": "^1.6.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
+    "@types/sockjs-client": "^1.5.4",
     "typescript": "~5.8.3"
   },
   "private": true
