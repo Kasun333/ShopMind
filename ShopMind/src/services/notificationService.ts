@@ -1,6 +1,6 @@
 import SockJS from 'sockjs-client';
 import { Stomp, CompatClient, Frame, Message } from '@stomp/stompjs';
-import { WEBSOCKET_URL } from '../config/apiConfig';
+import { WEBSOCKET_URL, NOTIFICATION_API_URL } from '../config/apiConfig';
 
 export interface Notification {
   id: number;
@@ -183,6 +183,89 @@ class NotificationService {
     }
 
     return this.connect(this.userId);
+  }
+
+  // API Methods for fetching and managing notifications
+  
+  // Get all notifications for a specific user
+  async getUserNotifications(userId: string, token?: string): Promise<Notification[]> {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log(`📡 Fetching notifications for user: ${userId}`);
+      const response = await fetch(`${NOTIFICATION_API_URL}/api/notifications/user/${userId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (response.ok) {
+        const notifications: Notification[] = await response.json();
+        console.log(`✅ Fetched ${notifications.length} notifications`);
+        
+        // Sort notifications by createdAt (newest first)
+        notifications.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        
+        return notifications;
+      } else {
+        console.error('❌ Failed to fetch notifications:', response.status, response.statusText);
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ Error fetching notifications:', error);
+      return [];
+    }
+  }
+
+  // Mark notification as read
+  async markNotificationAsRead(notificationId: number, token?: string): Promise<boolean> {
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log(`📖 Marking notification ${notificationId} as read`);
+      const response = await fetch(`${NOTIFICATION_API_URL}/api/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers,
+      });
+
+      if (response.ok) {
+        console.log(`✅ Notification ${notificationId} marked as read`);
+        return true;
+      } else {
+        console.error('❌ Failed to mark notification as read:', response.status, response.statusText);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error marking notification as read:', error);
+      return false;
+    }
+  }
+
+  // Batch mark multiple notifications as read
+  async markMultipleNotificationsAsRead(notificationIds: number[], token?: string): Promise<boolean> {
+    try {
+      const results = await Promise.all(
+        notificationIds.map(id => this.markNotificationAsRead(id, token))
+      );
+      
+      return results.every(result => result === true);
+    } catch (error) {
+      console.error('❌ Error marking multiple notifications as read:', error);
+      return false;
+    }
   }
 }
 
