@@ -33,8 +33,13 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
     markAllAsRead,
     clearNotifications,
     clearNotification,
-    refreshNotifications
+    refreshNotifications,
+    forceReconnect,
+    getDebugInfo
   } = useNotifications(user.id, token);
+
+  // Add debug state
+  const [showDebug, setShowDebug] = useState(false);
   
   const conversations = [
     {
@@ -91,12 +96,20 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
   };
 
   const sendTestNotification = () => {
+    const connectionInfo = notificationService.getConnectionInfo();
+    console.log('🔍 Connection Debug Info:', connectionInfo);
+    
     if (connected) {
-      const testMessage = `Test notification sent at ${new Date().toLocaleTimeString()}`;
+      const testMessage = `🧪 Test notification sent at ${new Date().toLocaleTimeString()}`;
       notificationService.sendTestNotification(testMessage, 'TEST');
-      Alert.alert('Test Sent', 'A test notification has been sent!');
+      Alert.alert('Test Sent', 'A test notification has been sent! Check console for details.');
     } else {
-      Alert.alert('Not Connected', 'Please wait for WebSocket connection to establish.');
+      console.log('❌ Cannot send test - not connected');
+      console.log('📊 Debug info:', connectionInfo);
+      Alert.alert(
+        'Not Connected', 
+        `WebSocket not connected. Debug info:\n\nConnected: ${connectionInfo.connected}\nHandlers: ${connectionInfo.handlersCount}\nUser ID: ${connectionInfo.userId}`
+      );
     }
   };
 
@@ -293,9 +306,28 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
             <View style={styles.statusRow}>
               <View style={[styles.connectionDot, { backgroundColor: connected ? '#10B981' : '#EF4444' }]} />
               <Text style={styles.connectionText}>
-                {connected ? '🟢 Connected to notifications' : '🔴 Disconnected'}
+                {connected ? '🟢 Connected to real-time notifications' : '🔴 Disconnected from real-time'}
               </Text>
+              {!connected && (
+                <TouchableOpacity onPress={forceReconnect} style={styles.reconnectButton}>
+                  <Text style={styles.reconnectText}>Reconnect</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={styles.debugButton} 
+                onPress={() => setShowDebug(!showDebug)}
+              >
+                <Ionicons name="bug-outline" size={12} color="#6B7280" />
+              </TouchableOpacity>
             </View>
+            
+            {/* Debug Info */}
+            {showDebug && (
+              <View style={styles.debugInfo}>
+                <Text style={styles.debugText}>{getDebugInfo()}</Text>
+              </View>
+            )}
+            
             {unreadCount > 0 && (
               <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllReadButton}>
                 <Text style={styles.markAllReadText}>Mark all as read</Text>
@@ -715,6 +747,36 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '500',
     flex: 1,
+  },
+  reconnectButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#2A7CC7',
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  reconnectText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  debugButton: {
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(107, 114, 128, 0.1)',
+    marginLeft: 8,
+  },
+  debugInfo: {
+    backgroundColor: 'rgba(100, 116, 139, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  debugText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontFamily: 'monospace',
+    lineHeight: 14,
   },
   markAllReadButton: {
     paddingHorizontal: 12,
