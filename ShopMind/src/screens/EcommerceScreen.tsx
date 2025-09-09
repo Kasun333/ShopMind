@@ -49,11 +49,22 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
       const response = await fetch(`${BASE_URL}/api/products`);
       if (response.ok) {
         const data: any[] = await response.json();
-        // Map id to productId for frontend compatibility
-        const mappedProducts: Product[] = data.map(item => ({
-          ...item,
-          productId: item.id
-        }));
+        console.log('Raw API response:', data);
+        
+        // Map backend response to frontend Product interface
+        const mappedProducts: Product[] = data.map(item => {
+          const mappedProduct: Product = {
+            productId: item.productId,  // Use productId directly from API response
+            name: item.name || '',
+            description: item.description || '',
+            imageUrl: item.imageUrl || item.image_url || '',
+            stock: item.stock || 0,
+            categoryId: item.categoryId || item.category_id || 0,
+            price: item.price || 0
+          };
+          console.log('Mapped product:', mappedProduct);
+          return mappedProduct;
+        });
         setProducts(mappedProducts);
       } else {
         Alert.alert('Error', 'Failed to fetch products');
@@ -73,10 +84,22 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
       const response = await fetch(`${BASE_URL}/api/products/category/${categoryId}`);
       if (response.ok) {
         const data: any[] = await response.json();
-        const mappedProducts: Product[] = data.map(item => ({
-          ...item,
-          productId: item.id
-        }));
+        console.log('Raw category API response:', data);
+        
+        // Map backend response to frontend Product interface
+        const mappedProducts: Product[] = data.map(item => {
+          const mappedProduct: Product = {
+            productId: item.productId,  // Use productId directly from API response
+            name: item.name || '',
+            description: item.description || '',
+            imageUrl: item.imageUrl || item.image_url || '',
+            stock: item.stock || 0,
+            categoryId: item.categoryId || item.category_id || 0,
+            price: item.price || 0
+          };
+          console.log('Mapped category product:', mappedProduct);
+          return mappedProduct;
+        });
         setProducts(mappedProducts);
         setSelectedCategory(categoryId);
       } else {
@@ -113,6 +136,28 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
 
   const addToCart = async (product: Product) => {
     try {
+      // Enhanced debug logging
+      console.log('=== ADD TO CART DEBUG ===');
+      console.log('Raw product object:', JSON.stringify(product, null, 2));
+      console.log('Product ID:', product.productId);
+      console.log('Product ID type:', typeof product.productId);
+      console.log('Product keys:', Object.keys(product));
+      console.log('Product values:', Object.values(product));
+      
+      // Validate product has required fields
+      if (!product.productId) {
+        console.error('❌ Product missing productId:', product);
+        Alert.alert('Error', 'Product ID is missing. Please try refreshing the products.');
+        return;
+      }
+
+      // Additional validation
+      if (typeof product.productId !== 'number') {
+        console.error('❌ Product ID is not a number:', product.productId, typeof product.productId);
+        Alert.alert('Error', 'Invalid product ID format. Please try refreshing the products.');
+        return;
+      }
+
       const result = await addToCartService(product, 1);
       if (result.success) {
         Alert.alert('Added to Cart', result.message);

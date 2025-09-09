@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import UserOrdersComponent from '../components/UserOrdersComponent';
+import NotificationCard from '../components/NotificationCard';
+import useNotifications from '../hooks/useNotifications';
+import notificationService, { Notification } from '../services/notificationService';
 
 const { width } = Dimensions.get('window');
 
@@ -18,7 +21,18 @@ interface MessagesScreenProps {
 }
 
 const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
-  const [activeTab, setActiveTab] = useState<'messages' | 'orders'>('messages');
+  const [activeTab, setActiveTab] = useState<'messages' | 'notifications' | 'orders'>('messages');
+  
+  // Use notifications hook
+  const {
+    notifications,
+    connected,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    clearNotifications,
+    clearNotification
+  } = useNotifications(user.id);
   
   const conversations = [
     {
@@ -55,6 +69,46 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
     },
   ];
 
+  // Handle notification actions
+  const handleNotificationPress = (notification: Notification) => {
+    console.log('Notification pressed:', notification);
+    if (!notification.isRead) {
+      markAsRead(notification.id);
+    }
+    
+    // Add logic to navigate based on notification type
+    switch (notification.type) {
+      case 'ORDER':
+        setActiveTab('orders');
+        break;
+      case 'DELIVERY':
+        // Navigate to delivery tracking if available
+        break;
+      // Add more cases as needed
+    }
+  };
+
+  const sendTestNotification = () => {
+    if (connected) {
+      const testMessage = `Test notification sent at ${new Date().toLocaleTimeString()}`;
+      notificationService.sendTestNotification(testMessage, 'TEST');
+      Alert.alert('Test Sent', 'A test notification has been sent!');
+    } else {
+      Alert.alert('Not Connected', 'Please wait for WebSocket connection to establish.');
+    }
+  };
+
+  const handleClearAllNotifications = () => {
+    Alert.alert(
+      'Clear All Notifications',
+      'Are you sure you want to clear all notifications?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: clearNotifications }
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       {/* Header with Gradient */}
@@ -77,11 +131,32 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
           >
             <Ionicons 
               name="chatbubble-outline" 
-              size={20} 
+              size={16} 
               color={activeTab === 'messages' ? '#FFFFFF' : 'rgba(255,255,255,0.7)'} 
             />
             <Text style={[styles.tabText, activeTab === 'messages' && styles.activeTabText]}>
               Messages
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'notifications' && styles.activeTab]}
+            onPress={() => setActiveTab('notifications')}
+          >
+            <View style={styles.tabIconContainer}>
+              <Ionicons 
+                name="notifications-outline" 
+                size={16} 
+                color={activeTab === 'notifications' ? '#FFFFFF' : 'rgba(255,255,255,0.7)'} 
+              />
+              {unreadCount > 0 && (
+                <View style={styles.tabBadge}>
+                  <Text style={styles.tabBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.tabText, activeTab === 'notifications' && styles.activeTabText]}>
+              Notifications
             </Text>
           </TouchableOpacity>
           
@@ -91,11 +166,11 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
           >
             <Ionicons 
               name="cube-outline" 
-              size={20} 
+              size={16} 
               color={activeTab === 'orders' ? '#FFFFFF' : 'rgba(255,255,255,0.7)'} 
             />
             <Text style={[styles.tabText, activeTab === 'orders' && styles.activeTabText]}>
-              My Orders
+              Orders
             </Text>
           </TouchableOpacity>
         </View>
@@ -184,6 +259,89 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
           <View style={styles.statusInfo}>
             <Text style={styles.statusText}>
               <Ionicons name="time-outline" size={12} color="#64748B" /> Last updated: 2025-09-02 10:22:44
+            </Text>
+          </View>
+        </ScrollView>
+      ) : activeTab === 'notifications' ? (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Connection Status */}
+          <View style={styles.connectionStatus}>
+            <View style={styles.statusRow}>
+              <View style={[styles.connectionDot, { backgroundColor: connected ? '#10B981' : '#EF4444' }]} />
+              <Text style={styles.connectionText}>
+                {connected ? '🟢 Connected to notifications' : '🔴 Disconnected'}
+              </Text>
+            </View>
+            {unreadCount > 0 && (
+              <TouchableOpacity onPress={markAllAsRead} style={styles.markAllReadButton}>
+                <Text style={styles.markAllReadText}>Mark all as read</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Notifications Header */}
+          <View style={styles.notificationsHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>
+                Real-time Notifications
+                {notifications.length > 0 && (
+                  <Text style={styles.notificationCount}> ({notifications.length})</Text>
+                )}
+              </Text>
+              <Text style={styles.sectionSubtitle}>
+                Stay updated with your orders and activities
+              </Text>
+            </View>
+            
+            <View style={styles.notificationActions}>
+              <TouchableOpacity onPress={sendTestNotification} style={styles.testButton}>
+                <Ionicons name="flask-outline" size={16} color="#2A7CC7" />
+                <Text style={styles.testButtonText}>Test</Text>
+              </TouchableOpacity>
+              
+              {notifications.length > 0 && (
+                <TouchableOpacity onPress={handleClearAllNotifications} style={styles.clearButton}>
+                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Notifications List */}
+          {notifications.length > 0 ? (
+            <View style={styles.notificationsList}>
+              {notifications.map((notification) => (
+                <NotificationCard
+                  key={notification.id}
+                  notification={notification}
+                  onPress={handleNotificationPress}
+                  onMarkAsRead={markAsRead}
+                  onDelete={clearNotification}
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyNotifications}>
+              <Ionicons name="notifications-outline" size={64} color="#CBD5E1" />
+              <Text style={styles.emptyNotificationsTitle}>No Notifications</Text>
+              <Text style={styles.emptyNotificationsSubtitle}>
+                You're all caught up! New notifications will appear here.
+              </Text>
+              <TouchableOpacity onPress={sendTestNotification} style={styles.testNotificationButton}>
+                <LinearGradient
+                  colors={['#2A7CC7', '#1E6091']}
+                  style={styles.testNotificationGradient}
+                >
+                  <Ionicons name="flask-outline" size={20} color="#FFFFFF" />
+                  <Text style={styles.testNotificationButtonText}>Send Test Notification</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.statusInfo}>
+            <Text style={styles.statusText}>
+              <Ionicons name="time-outline" size={12} color="#64748B" /> Last updated: {new Date().toLocaleString()}
             </Text>
           </View>
         </ScrollView>
@@ -442,6 +600,152 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 4,
     fontWeight: '400',
+  },
+  // Tab styles
+  tabIconContainer: {
+    position: 'relative',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  tabBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  // Notification styles
+  connectionStatus: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  connectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  connectionText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+    flex: 1,
+  },
+  markAllReadButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(42, 124, 199, 0.1)',
+    borderRadius: 16,
+  },
+  markAllReadText: {
+    fontSize: 12,
+    color: '#2A7CC7',
+    fontWeight: '600',
+  },
+  notificationsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 4,
+    marginBottom: 16,
+  },
+  notificationCount: {
+    color: '#64748B',
+    fontWeight: '400',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 4,
+    fontWeight: '400',
+  },
+  notificationActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(42, 124, 199, 0.1)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 124, 199, 0.2)',
+  },
+  testButtonText: {
+    fontSize: 12,
+    color: '#2A7CC7',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  clearButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  notificationsList: {
+    paddingBottom: 16,
+  },
+  emptyNotifications: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyNotificationsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyNotificationsSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  testNotificationButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  testNotificationGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  testNotificationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 

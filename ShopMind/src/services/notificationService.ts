@@ -1,0 +1,192 @@
+import SockJS from 'sockjs-client';
+import { Stomp, CompatClient, Frame, Message } from '@stomp/stompjs';
+import { WEBSOCKET_URL } from '../config/apiConfig';
+
+export interface Notification {
+  id: number;
+  userId: string;
+  message: string;
+  type: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
+export type NotificationHandler = (notification: Notification) => void;
+
+class NotificationService {
+  private stompClient: CompatClient | null = null;
+  private connected: boolean = false;
+  private userId: string | null = null;
+  private notificationHandlers: NotificationHandler[] = [];
+  private connectionAttempts: number = 0;
+  private maxConnectionAttempts: number = 5;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+
+  constructor() {
+    this.stompClient = null;
+    this.connected = false;
+    this.userId = null;
+  }
+
+  // Connect to WebSocket server
+  connect(userId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.userId = userId;
+      this.connectionAttempts++;
+
+      try {
+        console.log(`🔌 Attempting to connect to WebSocket: ${WEBSOCKET_URL}`);
+        
+        // Create WebSocket connection using SockJS
+        const socket = new SockJS(WEBSOCKET_URL);
+        this.stompClient = Stomp.over(socket);
+
+        // Disable debug logging in production
+        this.stompClient.debug = (str: string) => {
+          console.log('STOMP Debug:', str);
+        };
+
+        // Connect to server
+        this.stompClient.connect(
+          {}, // Headers
+          (frame: Frame) => {
+            console.log('✅ Connected to WebSocket notifications:', frame);
+            this.connected = true;
+            this.connectionAttempts = 0;
+
+            // Subscribe to personal notifications
+            this.stompClient?.subscribe('/user/queue/notifications', (message: Message) => {
+              try {
+                const notification: Notification = JSON.parse(message.body);
+                console.log('🔔 Received notification:', notification);
+                this.handleNotification(notification);
+              } catch (error) {
+                console.error('❌ Error parsing notification:', error);
+              }
+            });
+
+            // Subscribe to broadcast notifications (optional)
+            this.stompClient?.subscribe('/topic/notifications', (message: Message) => {
+              try {
+                const notification: Notification = JSON.parse(message.body);
+                console.log('📢 Received broadcast notification:', notification);
+                this.handleNotification(notification);
+              } catch (error) {
+                console.error('❌ Error parsing broadcast notification:', error);
+              }
+            });
+
+            // Send user identification to server
+            this.stompClient?.send("/app/subscribe", {}, JSON.stringify({
+              userId: userId.toString()
+            }));
+
+            console.log(`👤 Subscribed user ${userId} to notifications`);
+            resolve();
+          },
+          (error: any) => {
+            console.error('❌ WebSocket connection error:', error);
+            this.connected = false;
+            
+            // Retry connection if attempts are within limit
+            if (this.connectionAttempts < this.maxConnectionAttempts) {
+              console.log(`🔄 Retrying connection in 5 seconds... (${this.connectionAttempts}/${this.maxConnectionAttempts})`);
+              this.reconnectTimeout = setTimeout(() => {
+                this.connect(userId).then(resolve).catch(reject);
+              }, 5000);
+            } else {
+              reject(new Error(`Failed to connect after ${this.maxConnectionAttempts} attempts`));
+            }
+          }
+        );
+      } catch (error) {
+        console.error('❌ Error creating WebSocket connection:', error);
+        reject(error);
+      }
+    });
+  }
+
+  // Handle incoming notifications
+  private handleNotification(notification: Notification): void {
+    // Call all registered notification handlers
+    this.notificationHandlers.forEach(handler => {
+      try {
+        handler(notification);
+      } catch (error) {
+        console.error('❌ Error in notification handler:', error);
+      }
+    });
+  }
+
+  // Add a notification handler
+  addNotificationHandler(handler: NotificationHandler): void {
+    this.notificationHandlers.push(handler);
+  }
+
+  // Remove a notification handler
+  removeNotificationHandler(handler: NotificationHandler): void {
+    const index = this.notificationHandlers.indexOf(handler);
+    if (index > -1) {
+      this.notificationHandlers.splice(index, 1);
+    }
+  }
+
+  // Send a test notification (for development)
+  sendTestNotification(message: string, type: string = 'TEST'): void {
+    if (this.stompClient && this.connected) {
+      const testNotification = {
+        userId: this.userId,
+        message: message,
+        type: type
+      };
+      
+      this.stompClient.send("/app/test", {}, JSON.stringify(testNotification));
+      console.log('📤 Sent test notification:', testNotification);
+    } else {
+      console.warn('⚠️ Cannot send notification - not connected to WebSocket');
+    }
+  }
+
+  // Disconnect from WebSocket
+  disconnect(): void {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
+    if (this.stompClient && this.connected) {
+      this.stompClient.disconnect();
+      this.connected = false;
+      this.connectionAttempts = 0;
+      console.log('🔌 Disconnected from WebSocket notifications');
+    }
+  }
+
+  // Check connection status
+  isConnected(): boolean {
+    return this.connected;
+  }
+
+  // Get current user ID
+  getCurrentUserId(): string | null {
+    return this.userId;
+  }
+
+  // Reconnect if disconnected
+  reconnect(): Promise<void> {
+    if (!this.userId) {
+      return Promise.reject(new Error('No user ID available for reconnection'));
+    }
+    
+    if (this.connected) {
+      return Promise.resolve();
+    }
+
+    return this.connect(this.userId);
+  }
+}
+
+// Create singleton instance
+const notificationService = new NotificationService();
+
+export default notificationService;
