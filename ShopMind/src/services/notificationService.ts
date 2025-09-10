@@ -1,6 +1,7 @@
 import SockJS from 'sockjs-client';
 import { Stomp, CompatClient, Frame, Message } from '@stomp/stompjs';
 import { WEBSOCKET_URL, NOTIFICATION_API_URL } from '../config/apiConfig';
+import InAppNotificationService from './inAppNotificationService';
 
 export interface Notification {
   id: number;
@@ -110,9 +111,27 @@ class NotificationService {
   }
 
   // Handle incoming notifications
-  private handleNotification(notification: Notification): void {
+  private async handleNotification(notification: Notification): Promise<void> {
     console.log('🎯 handleNotification called with:', notification);
     console.log('📋 Number of handlers to call:', this.notificationHandlers.length);
+    
+    try {
+      // Show enhanced in-app notification with sound and vibration
+      await InAppNotificationService.showEnhancedNotification(
+        `${notification.type} Notification`,
+        notification.message,
+        {
+          sound: true,
+          vibrate: true,
+          local: true,
+          data: notification
+        }
+      );
+      
+      console.log('✅ Enhanced notification shown');
+    } catch (error) {
+      console.error('❌ Failed to show enhanced notification:', error);
+    }
     
     // Call all registered notification handlers
     this.notificationHandlers.forEach((handler, index) => {
