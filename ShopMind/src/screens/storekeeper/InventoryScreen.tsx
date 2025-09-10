@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,13 @@ import {
   StatusBar,
   SafeAreaView,
   Platform,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../../types/User';
+import RestockModal from '../../components/RestockModal';
+import { RestockResponse } from '../../services/restockService';
 
 const { width } = Dimensions.get('window');
 
@@ -22,6 +25,9 @@ interface InventoryScreenProps {
 }
 
 const InventoryScreen: React.FC<InventoryScreenProps> = ({ user, token }) => {
+  // Restock modal state
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  
   const inventoryStats = [
     { title: 'Total Products', value: '1,234', color: '#059669', icon: 'cube-outline' },
     { title: 'Low Stock', value: '23', color: '#EF4444', icon: 'alert-circle-outline' },
@@ -38,6 +44,29 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ user, token }) => {
 
   const currentDateTime = "2025-08-18 19:11:43";
   const currentUser = "Kasun333";
+
+  // Restock handlers
+  const handleRestockPress = () => {
+    setShowRestockModal(true);
+  };
+
+  const handleRestockSuccess = (restockData: RestockResponse) => {
+    console.log('✅ Restock completed:', restockData);
+    
+    // Show success message
+    Alert.alert(
+      'Restock Successful! 🎉',
+      `${restockData.productName}\nAdded: ${restockData.quantityAdded} units\nNew Available Stock: ${restockData.newAvailableStock}`,
+      [{ text: 'OK' }]
+    );
+    
+    // TODO: Refresh inventory data here
+    // You might want to call a refresh function or update local state
+  };
+
+  const handleRestockClose = () => {
+    setShowRestockModal(false);
+  };
 
   return (
     <View style={styles.rootContainer}>
@@ -134,7 +163,11 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ user, token }) => {
               </LinearGradient>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.actionCardContainer} activeOpacity={0.8}>
+            <TouchableOpacity 
+              style={styles.actionCardContainer} 
+              activeOpacity={0.8}
+              onPress={handleRestockPress}
+            >
               <LinearGradient
                 colors={['#ECFDF5', '#D1FAE5']}
                 start={{ x: 0, y: 0 }}
@@ -188,7 +221,11 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ user, token }) => {
                       <Ionicons name="cube-outline" size={14} color="#64748B" /> Current: {item.stock} | Threshold: {item.threshold}
                     </Text>
                   </View>
-                  <TouchableOpacity style={styles.restockButtonContainer} activeOpacity={0.8}>
+                  <TouchableOpacity 
+                    style={styles.restockButtonContainer} 
+                    activeOpacity={0.8}
+                    onPress={handleRestockPress}
+                  >
                     <LinearGradient
                       colors={['#059669', '#047857']}
                       start={{ x: 0, y: 0 }}
@@ -240,6 +277,14 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ user, token }) => {
           <Ionicons name="add" size={24} color="#FFFFFF" />
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* Restock Modal */}
+      <RestockModal
+        visible={showRestockModal}
+        onClose={handleRestockClose}
+        token={token}
+        onRestockSuccess={handleRestockSuccess}
+      />
     </View>
   );
 };
