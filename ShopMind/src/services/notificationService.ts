@@ -116,19 +116,49 @@ class NotificationService {
     console.log('📋 Number of handlers to call:', this.notificationHandlers.length);
     
     try {
-      // Show enhanced in-app notification with sound and vibration
+      // Determine sound type based on notification type/content
+      let soundType: 'notification' | 'success' | 'error' | 'warning' = 'notification';
+      let toastType: 'success' | 'info' | 'warning' | 'error' = 'info';
+      
+      // Map notification types to sound types
+      switch (notification.type?.toLowerCase()) {
+        case 'order_completed':
+        case 'order_delivered':
+        case 'success':
+          soundType = 'success';
+          toastType = 'success';
+          break;
+        case 'order_cancelled':
+        case 'error':
+        case 'failed':
+          soundType = 'error';
+          toastType = 'error';
+          break;
+        case 'order_delayed':
+        case 'warning':
+        case 'alert':
+          soundType = 'warning';
+          toastType = 'warning';
+          break;
+        default:
+          soundType = 'notification';
+          toastType = 'info';
+      }
+
+      // Show enhanced in-app notification with appropriate sound
       await InAppNotificationService.showEnhancedNotification(
         `${notification.type} Notification`,
         notification.message,
         {
-          sound: true,
+          sound: soundType,
           vibrate: true,
           local: true,
-          data: notification
+          data: notification,
+          toastType: toastType
         }
       );
       
-      console.log('✅ Enhanced notification shown');
+      console.log(`✅ Enhanced notification shown with ${soundType} sound`);
     } catch (error) {
       console.error('❌ Failed to show enhanced notification:', error);
     }

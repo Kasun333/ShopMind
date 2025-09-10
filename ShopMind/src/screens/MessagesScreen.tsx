@@ -141,6 +141,8 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
     );
   };
 
+
+
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead();
@@ -399,6 +401,8 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
               )}
             </View>
           </View>
+
+
 
           {/* Loading State */}
           {isLoading && (
@@ -938,6 +942,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+
 });
 
 export default MessagesScreen;
