@@ -21,6 +21,7 @@ import OrderCard from '../../components/storekeeper/OrderCard';
 import OrderFilter from '../../components/storekeeper/OrderFilter';
 import ProcessOrderScreen from './ProcessOrderScreen';
 import { orderService } from '../../services/orderService';
+import ordersCacheService from '../../services/ordersCacheService';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +39,8 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showProcessOrder, setShowProcessOrder] = useState(false);
   const [orderTab, setOrderTab] = useState<'CONFIRMED' | 'PROCESSED'>('CONFIRMED');
+  const [isDataFromCache, setIsDataFromCache] = useState<boolean>(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const currentDate = "2025-08-18 18:18:12";
   const username = "Kasun333";
@@ -50,9 +53,44 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
     applyFilters();
   }, [orders, filters]);
 
-  const loadOrders = async (status: 'CONFIRMED' | 'PROCESSED') => {
+  const loadOrders = async (status: 'CONFIRMED' | 'PROCESSED', forceRefresh: boolean = false) => {
     setLoading(true);
     try {
+      console.log(`📋 Loading ${status} orders...`);
+      
+      // Try to get cached data first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedOrders = await ordersCacheService.getCachedOrdersByStatus(status);
+        if (cachedOrders && cachedOrders.length > 0) {
+          console.log(`📦 Loading ${status} orders from cache:`, cachedOrders.length);
+          
+          // Add default properties to cached orders
+          const ordersWithDefaults = cachedOrders.map(order => ({
+            ...order,
+            customerName: order.customerName || `Customer ${order.customerId}`,
+            customerPhone: order.customerPhone || '+1234567890',
+            customerEmail: order.customerEmail || `customer${order.customerId}@email.com`,
+            customerAddress: order.customerAddress || 'Address not available',
+            paymentStatus: order.paymentStatus || 'paid' as const,
+            paymentMethod: order.paymentMethod || 'card' as const,
+            priority: order.priority || 'medium' as const,
+            estimatedDeliveryTime: order.estimatedDeliveryTime || '30-45 minutes',
+          }));
+          
+          setOrders(ordersWithDefaults);
+          setIsDataFromCache(true);
+          setLastUpdated(new Date());
+          setLoading(false);
+          
+          console.log(`✅ ${status} orders loaded from cache`);
+          return;
+        }
+      }
+      
+      // Fetch fresh data from API
+      console.log(`🌐 Fetching fresh ${status} orders from API...`);
+      setIsDataFromCache(false);
+      
       const response = await orderService.getOrdersByStatus(status, token);
       if (response.success) {
         const ordersWithDefaults = response.orders.map(order => ({
@@ -66,7 +104,14 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
           priority: 'medium' as const,
           estimatedDeliveryTime: '30-45 minutes',
         }));
+        
         setOrders(ordersWithDefaults);
+        setLastUpdated(new Date());
+        
+        // Cache the fresh data
+        await ordersCacheService.cacheOrdersByStatus(status, ordersWithDefaults);
+        console.log(`💾 ${status} orders cached successfully`);
+        
       } else {
         Alert.alert('Error', 'Failed to load orders');
       }
@@ -146,7 +191,16 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadOrders(orderTab).finally(() => setRefreshing(false));
+    loadOrders(orderTab, true).finally(() => setRefreshing(false)); // Force refresh
+  };
+
+  const clearOrdersCache = async () => {
+    try {
+      await ordersCacheService.clearCache();
+      console.log('🗑️ Orders cache cleared manually');
+    } catch (error) {
+      console.error('❌ Failed to clear orders cache:', error);
+    }
   };
 
   const renderOrderItem = ({ item }: { item: Order }) => (
@@ -234,16 +288,42 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
                     <Text style={styles.title}>Manage Orders</Text>
                     <Text style={styles.subtitle}>
                       {filteredOrders.length} of {orders.length} orders
+                      {isDataFromCache && (
+                        <Text style={styles.cacheIndicator}> 📦</Text>
+                      )}
                     </Text>
+                    {lastUpdated && (
+                      <Text style={styles.lastUpdatedText}>
+                        Last updated: {lastUpdated.toLocaleTimeString()}
+                      </Text>
+                    )}
                   </View>
 
-                  <View style={styles.dateContainer}>
-                    <Text style={styles.dateText}>
-                      <Ionicons name="time-outline" size={12} color="rgba(255, 255, 255, 0.8)" /> {currentDate}
-                    </Text>
-                    <Text style={styles.usernameText}>
-                      <Ionicons name="person-outline" size={12} color="rgba(255, 255, 255, 0.8)" /> {username}
-                    </Text>
+                  <View style={styles.headerActions}>
+                    <TouchableOpacity
+                      style={styles.refreshButton}
+                      onPress={() => {
+                        console.log('🔄 Manual refresh triggered');
+                        setRefreshing(true);
+                        loadOrders(orderTab, true).finally(() => setRefreshing(false));
+                      }}
+                      disabled={loading || refreshing}
+                    >
+                      <Ionicons 
+                        name="refresh-outline" 
+                        size={20} 
+                        color={loading || refreshing ? "rgba(255, 255, 255, 0.5)" : "#FFFFFF"} 
+                      />
+                    </TouchableOpacity>
+                    
+                    <View style={styles.dateContainer}>
+                      <Text style={styles.dateText}>
+                        <Ionicons name="time-outline" size={12} color="rgba(255, 255, 255, 0.8)" /> {currentDate}
+                      </Text>
+                      <Text style={styles.usernameText}>
+                        <Ionicons name="person-outline" size={12} color="rgba(255, 255, 255, 0.8)" /> {username}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
@@ -372,6 +452,27 @@ const styles = StyleSheet.create({
   usernameText: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
+  },
+  cacheIndicator: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  lastUpdatedText: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  refreshButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tabsContainer: {
     flexDirection: 'row',
