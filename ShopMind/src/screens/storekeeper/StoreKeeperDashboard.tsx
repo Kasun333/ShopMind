@@ -54,6 +54,12 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
   const [revenueLoading, setRevenueLoading] = useState<boolean>(true);
   const [revenueError, setRevenueError] = useState<string | null>(null);
 
+  // State for order counts
+  const [processedOrdersCount, setProcessedOrdersCount] = useState<number | null>(null);
+  const [confirmedOrdersCount, setConfirmedOrdersCount] = useState<number | null>(null);
+  const [orderCountsLoading, setOrderCountsLoading] = useState<boolean>(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
   // Demo mode state
   const [demoMode, setDemoMode] = useState(false);
 
@@ -64,20 +70,24 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     unreadCount
   } = useNotifications(user.id, token);
 
-  // Fetch revenue data
-  const fetchRevenueData = async () => {
+  // Fetch revenue and order count data
+  const fetchDashboardData = async () => {
     try {
       setRevenueLoading(true);
+      setOrderCountsLoading(true);
       setRevenueError(null);
       
-      console.log('💰 Fetching revenue data...');
+      console.log('� Fetching dashboard data...');
       
-      // Fetch both today's and monthly revenue data
-      const [todayData, monthlyData] = await Promise.all([
+      // Fetch all dashboard data in parallel
+      const [todayData, monthlyData, processedCount, confirmedCount] = await Promise.all([
         RevenueService.getTodayRevenue(token),
-        RevenueService.getMonthlyRevenue(token)
+        RevenueService.getMonthlyRevenue(token),
+        RevenueService.getProcessedOrdersCount(token),
+        RevenueService.getConfirmedOrdersCount(token)
       ]);
 
+      // Update revenue data
       if (todayData) {
         setTodayRevenue(todayData);
         console.log('✅ Today\'s revenue loaded:', todayData);
@@ -88,11 +98,24 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
         console.log('✅ Monthly revenue loaded:', monthlyData.length, 'months');
       }
 
+      // Update order counts
+      if (processedCount !== null) {
+        setProcessedOrdersCount(processedCount);
+        console.log('✅ Processed orders count loaded:', processedCount);
+      }
+
+      if (confirmedCount !== null) {
+        setConfirmedOrdersCount(confirmedCount);
+        console.log('✅ Confirmed orders count loaded:', confirmedCount);
+      }
+
     } catch (error) {
-      console.error('❌ Failed to fetch revenue data:', error);
-      setRevenueError('Failed to load revenue data');
+      console.error('❌ Failed to fetch dashboard data:', error);
+      setRevenueError('Failed to load dashboard data');
     } finally {
       setRevenueLoading(false);
+      setOrderCountsLoading(false);
+      setLastUpdated(new Date());
     }
   };
 
@@ -103,8 +126,8 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
         await InAppNotificationService.initialize();
         console.log('🏪 StoreKeeper dashboard notifications initialized');
         
-        // Fetch initial revenue data
-        await fetchRevenueData();
+        // Fetch initial dashboard data
+        await fetchDashboardData();
       } catch (error) {
         console.error('❌ Failed to initialize dashboard:', error);
       }
@@ -138,19 +161,20 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     }
   }, [notifications]);
 
-  // Calculate stats from revenue data
+  // Calculate stats from revenue and order count data
   const stats: OrderStats = useMemo(() => {
     const currentMonthRevenue = monthlyRevenue ? RevenueService.getCurrentMonthRevenue(monthlyRevenue) : null;
+    const totalOrders = (processedOrdersCount || 0) + (confirmedOrdersCount || 0);
     
     return {
-      totalOrders: 156, // Keep hardcoded for now
-      pendingOrders: 12,
-      completedOrders: 132,
-      cancelledOrders: 12,
+      totalOrders: totalOrders,
+      pendingOrders: confirmedOrdersCount || 0, // Confirmed orders are pending to be processed
+      completedOrders: processedOrdersCount || 0, // Processed orders are completed
+      cancelledOrders: 0, // We'll need another API for this
       todayRevenue: todayRevenue?.revenue || 0,
       monthRevenue: currentMonthRevenue?.revenue || 0,
     };
-  }, [todayRevenue, monthlyRevenue]);
+  }, [todayRevenue, monthlyRevenue, processedOrdersCount, confirmedOrdersCount]);
 
   const quickActions = [
     { id: '1', title: 'View Orders', icon: 'receipt-outline', color: '#10B981' },
@@ -292,9 +316,9 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     }
   };
 
-  // Refresh revenue data
-  const refreshRevenueData = async () => {
-    await fetchRevenueData();
+  // Refresh dashboard data
+  const refreshDashboardData = async () => {
+    await fetchDashboardData();
   };
 
   const handleQuickAction = (actionId: string) => {
@@ -377,8 +401,10 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
                   style={styles.statGradient}
                 >
                   <View style={styles.statContent}>
-                    <Text style={styles.statNumber}>{stats.pendingOrders}</Text>
-                    <Text style={styles.statLabel}>Pending</Text>
+                    <Text style={styles.statNumber}>
+                      {orderCountsLoading ? '...' : stats.pendingOrders}
+                    </Text>
+                    <Text style={styles.statLabel}>To Process</Text>
                   </View>
                   <View style={styles.statIconContainer}>
                     <Ionicons name="hourglass-outline" size={26} color="#F59E0B" />
@@ -391,8 +417,10 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
                   style={styles.statGradient}
                 >
                   <View style={styles.statContent}>
-                    <Text style={styles.statNumber}>{stats.completedOrders}</Text>
-                    <Text style={styles.statLabel}>Completed</Text>
+                    <Text style={styles.statNumber}>
+                      {orderCountsLoading ? '...' : stats.completedOrders}
+                    </Text>
+                    <Text style={styles.statLabel}>Processed</Text>
                   </View>
                   <View style={styles.statIconContainer}>
                     <Ionicons name="checkmark-circle-outline" size={26} color="#10B981" />
@@ -484,19 +512,25 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
               >
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Total Orders:</Text>
-                  <Text style={styles.summaryValue}>{stats.totalOrders}</Text>
+                  <Text style={styles.summaryValue}>
+                    {orderCountsLoading ? 'Loading...' : stats.totalOrders}
+                  </Text>
                 </View>
                 <View style={styles.divider} />
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Pending:</Text>
+                  <Text style={styles.summaryLabel}>To Process:</Text>
                   <View style={styles.valueBadge}>
-                    <Text style={[styles.summaryValue, styles.pendingText]}>{stats.pendingOrders}</Text>
+                    <Text style={[styles.summaryValue, styles.pendingText]}>
+                      {orderCountsLoading ? '...' : stats.pendingOrders}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Completed:</Text>
+                  <Text style={styles.summaryLabel}>Processed:</Text>
                   <View style={[styles.valueBadge, styles.successBadge]}>
-                    <Text style={[styles.summaryValue, styles.successText]}>{stats.completedOrders}</Text>
+                    <Text style={[styles.summaryValue, styles.successText]}>
+                      {orderCountsLoading ? '...' : stats.completedOrders}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.summaryRow}>
@@ -513,10 +547,20 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
           {monthlyRevenue && monthlyRevenue.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  <Ionicons name="analytics-outline" size={20} color="#047857" /> Revenue Insights
-                </Text>
-                <TouchableOpacity onPress={refreshRevenueData} style={styles.refreshButton}>
+                <View style={styles.titleWithTime}>
+                  <Text style={styles.sectionTitle}>
+                    <Ionicons name="analytics-outline" size={20} color="#047857" /> Revenue Insights
+                  </Text>
+                  {lastUpdated && (
+                    <Text style={styles.lastUpdated}>
+                      Updated: {lastUpdated.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity onPress={refreshDashboardData} style={styles.refreshButton}>
                   <Ionicons name="refresh-outline" size={16} color="#047857" />
                 </TouchableOpacity>
               </View>
@@ -1261,6 +1305,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#1F2937',
+  },
+  // Title with time styles
+  titleWithTime: {
+    flex: 1,
+  },
+  lastUpdated: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
 });
 
