@@ -90,7 +90,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
           setMonthlyRevenue(cachedData.monthlyRevenue);
           setProcessedOrdersCount(cachedData.processedOrdersCount);
           setConfirmedOrdersCount(cachedData.confirmedOrdersCount);
-          setLastUpdated(new Date(cachedData.lastUpdated));
+          setLastUpdated(cachedData.lastUpdated ? new Date(cachedData.lastUpdated) : null);
           setIsDataFromCache(true);
           
           setRevenueLoading(false);
@@ -1376,11 +1376,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   // Header actions styles
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
+  // Removed duplicate headerActions style to fix object literal error
   cacheIndicator: {
     position: 'absolute',
     top: -4,
