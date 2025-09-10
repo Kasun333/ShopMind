@@ -18,6 +18,7 @@ import { OrderStats } from '../../types/Order';
 import { useNotifications } from '../../hooks/useNotifications';
 import InAppNotificationService from '../../services/inAppNotificationService';
 import StoreKeeperNotificationService from '../../services/storeKeeperNotificationService';
+import RevenueService, { TodayRevenue, MonthlyRevenue } from '../../services/revenueService';
 
 const { width } = Dimensions.get('window');
 
@@ -47,6 +48,12 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     { id: '4', text: 'Order #ORD-2024-003 delivered', time: '2 hours ago', type: 'delivery', priority: 'low' },
   ]);
 
+  // State for revenue data
+  const [todayRevenue, setTodayRevenue] = useState<TodayRevenue | null>(null);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenue[] | null>(null);
+  const [revenueLoading, setRevenueLoading] = useState<boolean>(true);
+  const [revenueError, setRevenueError] = useState<string | null>(null);
+
   // Demo mode state
   const [demoMode, setDemoMode] = useState(false);
 
@@ -57,18 +64,53 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     unreadCount
   } = useNotifications(user.id, token);
 
-  // Initialize notification system
+  // Fetch revenue data
+  const fetchRevenueData = async () => {
+    try {
+      setRevenueLoading(true);
+      setRevenueError(null);
+      
+      console.log('💰 Fetching revenue data...');
+      
+      // Fetch both today's and monthly revenue data
+      const [todayData, monthlyData] = await Promise.all([
+        RevenueService.getTodayRevenue(token),
+        RevenueService.getMonthlyRevenue(token)
+      ]);
+
+      if (todayData) {
+        setTodayRevenue(todayData);
+        console.log('✅ Today\'s revenue loaded:', todayData);
+      }
+
+      if (monthlyData) {
+        setMonthlyRevenue(monthlyData);
+        console.log('✅ Monthly revenue loaded:', monthlyData.length, 'months');
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to fetch revenue data:', error);
+      setRevenueError('Failed to load revenue data');
+    } finally {
+      setRevenueLoading(false);
+    }
+  };
+
+  // Initialize notification system and fetch data
   useEffect(() => {
-    const initNotifications = async () => {
+    const initDashboard = async () => {
       try {
         await InAppNotificationService.initialize();
         console.log('🏪 StoreKeeper dashboard notifications initialized');
+        
+        // Fetch initial revenue data
+        await fetchRevenueData();
       } catch (error) {
-        console.error('❌ Failed to initialize dashboard notifications:', error);
+        console.error('❌ Failed to initialize dashboard:', error);
       }
     };
 
-    initNotifications();
+    initDashboard();
   }, [user.id, token]);
 
   // Convert notifications to activities
@@ -96,15 +138,19 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     }
   }, [notifications]);
 
-  // Hardcoded stats for demonstration
-  const stats: OrderStats = {
-    totalOrders: 156,
-    pendingOrders: 12,
-    completedOrders: 132,
-    cancelledOrders: 12,
-    todayRevenue: 1245.67,
-    monthRevenue: 23456.89,
-  };
+  // Calculate stats from revenue data
+  const stats: OrderStats = useMemo(() => {
+    const currentMonthRevenue = monthlyRevenue ? RevenueService.getCurrentMonthRevenue(monthlyRevenue) : null;
+    
+    return {
+      totalOrders: 156, // Keep hardcoded for now
+      pendingOrders: 12,
+      completedOrders: 132,
+      cancelledOrders: 12,
+      todayRevenue: todayRevenue?.revenue || 0,
+      monthRevenue: currentMonthRevenue?.revenue || 0,
+    };
+  }, [todayRevenue, monthlyRevenue]);
 
   const quickActions = [
     { id: '1', title: 'View Orders', icon: 'receipt-outline', color: '#10B981' },
@@ -246,6 +292,11 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     }
   };
 
+  // Refresh revenue data
+  const refreshRevenueData = async () => {
+    await fetchRevenueData();
+  };
+
   const handleQuickAction = (actionId: string) => {
     switch (actionId) {
       case '1': // View Orders
@@ -357,7 +408,22 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
                   style={styles.statGradient}
                 >
                   <View style={styles.statContent}>
-                    <Text style={styles.statNumber}>${stats.todayRevenue.toFixed(0)}</Text>
+                    {revenueLoading ? (
+                      <ActivityIndicator size="small" color="#10B981" />
+                    ) : revenueError ? (
+                      <Text style={styles.statError}>Error</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.statNumber}>
+                          {RevenueService.formatCurrency(stats.todayRevenue, todayRevenue?.currency)}
+                        </Text>
+                        {todayRevenue && (
+                          <Text style={styles.statSubtext}>
+                            {todayRevenue.count} orders today
+                          </Text>
+                        )}
+                      </>
+                    )}
                     <Text style={styles.statLabel}>Today Revenue</Text>
                   </View>
                   <View style={styles.statIconContainer}>
@@ -371,11 +437,35 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
                   style={styles.statGradient}
                 >
                   <View style={styles.statContent}>
-                    <Text style={styles.statNumber}>${(stats.monthRevenue / 1000).toFixed(1)}k</Text>
-                    <Text style={styles.statLabel}>Month</Text>
+                    {revenueLoading ? (
+                      <ActivityIndicator size="small" color="#10B981" />
+                    ) : revenueError ? (
+                      <Text style={styles.statError}>Error</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.statNumber}>
+                          {stats.monthRevenue >= 1000 
+                            ? `${RevenueService.formatCurrency(stats.monthRevenue / 1000, monthlyRevenue?.[0]?.currency).slice(0, -3)}k`
+                            : RevenueService.formatCurrency(stats.monthRevenue, monthlyRevenue?.[0]?.currency)
+                          }
+                        </Text>
+                        {monthlyRevenue && (
+                          <Text style={styles.statSubtext}>
+                            {RevenueService.getCurrentMonthRevenue(monthlyRevenue)?.count || 0} orders this month
+                          </Text>
+                        )}
+                      </>
+                    )}
+                    <Text style={styles.statLabel}>This Month</Text>
                   </View>
-                  <View style={styles.statIconContainer}>
-                    <Ionicons name="trending-up-outline" size={26} color="#10B981" />
+                  <View style={[
+                    styles.statIconContainer,
+                    monthlyRevenue && RevenueService.getMonthlyGrowth(monthlyRevenue) && 
+                    RevenueService.getMonthlyGrowth(monthlyRevenue)! > 0 
+                      ? { backgroundColor: '#10B981' } 
+                      : { backgroundColor: '#6B7280' }
+                  ]}>
+                    <Ionicons name="trending-up-outline" size={26} color="#FFFFFF" />
                   </View>
                 </LinearGradient>
               </View>
@@ -418,6 +508,82 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
               </LinearGradient>
             </View>
           </View>
+
+          {/* Revenue Insights */}
+          {monthlyRevenue && monthlyRevenue.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  <Ionicons name="analytics-outline" size={20} color="#047857" /> Revenue Insights
+                </Text>
+                <TouchableOpacity onPress={refreshRevenueData} style={styles.refreshButton}>
+                  <Ionicons name="refresh-outline" size={16} color="#047857" />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.insightsContainer}>
+                <LinearGradient
+                  colors={['#F8FAFC', '#E2E8F0']}
+                  style={styles.insightsGradient}
+                >
+                  {/* Monthly Growth */}
+                  {RevenueService.getMonthlyGrowth(monthlyRevenue) !== null && (
+                    <View style={styles.insightItem}>
+                      <View style={styles.insightIcon}>
+                        <Ionicons 
+                          name={RevenueService.getMonthlyGrowth(monthlyRevenue)! >= 0 ? "trending-up" : "trending-down"} 
+                          size={20} 
+                          color={RevenueService.getMonthlyGrowth(monthlyRevenue)! >= 0 ? "#10B981" : "#EF4444"} 
+                        />
+                      </View>
+                      <View style={styles.insightContent}>
+                        <Text style={styles.insightLabel}>Monthly Growth</Text>
+                        <Text style={[
+                          styles.insightValue,
+                          { color: RevenueService.getMonthlyGrowth(monthlyRevenue)! >= 0 ? "#10B981" : "#EF4444" }
+                        ]}>
+                          {RevenueService.getMonthlyGrowth(monthlyRevenue)! >= 0 ? "+" : ""}
+                          {RevenueService.getMonthlyGrowth(monthlyRevenue)}%
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  
+                  {/* Year Total */}
+                  <View style={styles.insightItem}>
+                    <View style={styles.insightIcon}>
+                      <Ionicons name="calendar" size={20} color="#3B82F6" />
+                    </View>
+                    <View style={styles.insightContent}>
+                      <Text style={styles.insightLabel}>Year Total</Text>
+                      <Text style={styles.insightValue}>
+                        {RevenueService.formatCurrency(
+                          RevenueService.getTotalYearRevenue(monthlyRevenue), 
+                          monthlyRevenue[0]?.currency
+                        )}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  {/* Average per Month */}
+                  <View style={styles.insightItem}>
+                    <View style={styles.insightIcon}>
+                      <Ionicons name="bar-chart" size={20} color="#8B5CF6" />
+                    </View>
+                    <View style={styles.insightContent}>
+                      <Text style={styles.insightLabel}>Avg/Month</Text>
+                      <Text style={styles.insightValue}>
+                        {RevenueService.formatCurrency(
+                          RevenueService.getTotalYearRevenue(monthlyRevenue) / 12, 
+                          monthlyRevenue[0]?.currency
+                        )}
+                      </Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </View>
+            </View>
+          )}
 
           {/* Quick Actions */}
           <View style={styles.section}>
@@ -1028,6 +1194,73 @@ const styles = StyleSheet.create({
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Revenue specific styles
+  statError: {
+    fontSize: 16,
+    color: '#EF4444',
+    fontWeight: '600',
+  },
+  statSubtext: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  // Revenue insights styles
+  refreshButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(4, 120, 87, 0.1)',
+  },
+  insightsContainer: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#047857',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  insightsGradient: {
+    padding: 20,
+  },
+  insightItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  insightIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  insightContent: {
+    flex: 1,
+  },
+  insightLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  insightValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
   },
 });
 
