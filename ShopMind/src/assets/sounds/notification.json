@@ -1,0 +1,6 @@
+{
+  "notification": "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+  "success": "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg",
+  "error": "https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg",
+  "warning": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+}

@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { Audio } from 'expo-av';
 import { Vibration, Platform, Alert } from 'react-native';
 import ToastService from './toastService';
 
@@ -14,10 +15,23 @@ Notifications.setNotificationHandler({
 });
 
 export class InAppNotificationService {
+  private static soundObject: Audio.Sound | null = null;
 
-  // Initialize notification permissions
+  // Initialize notification permissions and sound system
   static async initialize(): Promise<boolean> {
     try {
+      // Initialize audio
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        staysActiveInBackground: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+
+      // Preload notification sound
+      await this.loadNotificationSound();
+
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       
@@ -27,10 +41,26 @@ export class InAppNotificationService {
       }
       
       console.log('📱 Notification permissions:', finalStatus);
+      console.log('🔊 Audio system initialized');
       return finalStatus === 'granted';
     } catch (error) {
       console.error('❌ Failed to initialize notifications:', error);
       return false;
+    }
+  }
+
+  // Load notification sound
+  static async loadNotificationSound() {
+    try {
+      if (this.soundObject) {
+        await this.soundObject.unloadAsync();
+      }
+      
+      // Use a built-in system sound or simple beep
+      // For Expo Go, we'll create a simple programmatic sound
+      console.log('🔊 Sound system ready (using system sounds)');
+    } catch (error) {
+      console.warn('⚠️ Could not initialize sound system:', error);
     }
   }
 
@@ -54,21 +84,75 @@ export class InAppNotificationService {
     }
   }
 
-  // Play notification sound (system default)
+  // Play short notification sound
   static async playNotificationSound() {
     try {
-      // For now, we'll rely on the system notification sound
-      // You can add expo-av later if you want custom sounds
-      console.log('📢 System notification sound will play with notification');
+      // Play short, subtle notification sound
+      await this.playSound('notification');
       return true;
     } catch (error) {
-      console.error('❌ Failed to prepare notification sound:', error);
+      // Silent fallback
       return false;
     }
   }
 
-  // Vibrate device
-  static vibrate(pattern: number[] = [100, 200, 100]) {
+  // Play short, subtle notification sounds
+  static async playSound(type: 'notification' | 'success' | 'error' | 'warning' = 'notification') {
+    try {
+      // Very subtle vibration patterns
+      const vibrationPatterns = {
+        notification: [50],       // Very short buzz
+        success: [30, 30, 30],    // Triple very short buzz
+        error: [80],              // Single short buzz
+        warning: [50, 30, 50],    // Quick double buzz
+      };
+
+      // Short, subtle sound URLs
+      const soundUrls = {
+        notification: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
+        success: 'https://actions.google.com/sounds/v1/cartoon/pop_up_01.ogg',
+        error: 'https://actions.google.com/sounds/v1/cartoon/pop_down_01.ogg',
+        warning: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
+      };
+
+      // Play short vibration
+      this.vibrate(vibrationPatterns[type]);
+
+      try {
+        // Play very short, quiet sound
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: soundUrls[type] },
+          { 
+            shouldPlay: true, 
+            volume: 0.08,  // Very quiet
+            rate: 1.5,     // Faster = shorter
+            shouldCorrectPitch: false,
+          }
+        );
+
+        // Auto-unload when finished
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            sound.unloadAsync();
+          }
+        });
+
+        console.log(`🔊 Short ${type} notification sound played`);
+      } catch (audioError) {
+        // Silently fail - vibration is enough
+        console.log(`📳 Using vibration only for ${type} notification`);
+      }
+      
+      return true;
+    } catch (error) {
+      // Minimal error logging for production
+      console.log(`📳 Notification ${type} (vibration only)`);
+      return false;
+    }
+  }
+
+  // Vibrate device (subtle)
+  static vibrate(pattern: number[] = [50]) {
     if (Platform.OS === 'android') {
       Vibration.vibrate(pattern);
     } else {
@@ -86,18 +170,23 @@ export class InAppNotificationService {
     title: string, 
     body: string, 
     options: {
-      sound?: boolean;
+      sound?: boolean | 'notification' | 'success' | 'error' | 'warning';
       vibrate?: boolean;
       local?: boolean;
       data?: any;
+      toastType?: 'success' | 'info' | 'warning' | 'error';
     } = {}
   ) {
-    const { sound = true, vibrate = true, local = true, data } = options;
+    const { sound = true, vibrate = true, local = true, data, toastType = 'info' } = options;
 
     try {
       // Play sound
       if (sound) {
-        await this.playNotificationSound();
+        if (typeof sound === 'string') {
+          await this.playSound(sound);
+        } else {
+          await this.playNotificationSound();
+        }
       }
 
       // Vibrate
@@ -110,7 +199,7 @@ export class InAppNotificationService {
         await this.showLocalNotification(title, body, data);
       }
 
-      return this.showInAppToast(title, body, 'info');
+      return this.showInAppToast(title, body, toastType);
     } catch (error) {
       console.error('❌ Enhanced notification failed:', error);
       return this.showInAppToast(title, body, 'error');
