@@ -55,3 +55,9 @@ export const REVENUE_ENDPOINTS = {
   TODAY: `${REVENUE_API_URL}/api/revenue/today`,
   MONTHLY: `${REVENUE_API_URL}/api/revenue/monthly`,
 };
+
+// Order count API endpoints
+export const ORDER_COUNT_ENDPOINTS = {
+  PROCESSED: `${ORDER_API_URL}/api/orders/count/processed`,
+  CONFIRMED: `${ORDER_API_URL}/api/orders/count/confirmed`,
+};

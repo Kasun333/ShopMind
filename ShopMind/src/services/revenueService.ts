@@ -1,4 +1,4 @@
-import { REVENUE_ENDPOINTS } from '../config/apiConfig';
+import { REVENUE_ENDPOINTS, ORDER_COUNT_ENDPOINTS } from '../config/apiConfig';
 
 // Revenue interfaces
 export interface TodayRevenue {
@@ -13,6 +13,15 @@ export interface MonthlyRevenue {
   revenue: number;
   currency: string;
   count: number;
+}
+
+// Order count interfaces
+export interface OrderCountResponse {
+  success: boolean;
+  status: string;
+  retrievedAt: string;
+  count: number;
+  message: string;
 }
 
 export class RevenueService {
@@ -104,6 +113,60 @@ export class RevenueService {
     
     const growth = ((currentMonthData.revenue - previousMonthData.revenue) / previousMonthData.revenue) * 100;
     return Math.round(growth * 100) / 100; // Round to 2 decimal places
+  }
+
+  // Get processed orders count
+  static async getProcessedOrdersCount(token: string): Promise<number | null> {
+    try {
+      console.log('📦 Fetching processed orders count...');
+      
+      const response = await fetch(ORDER_COUNT_ENDPOINTS.PROCESSED, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: OrderCountResponse = await response.json();
+      console.log('✅ Processed orders count fetched:', data.count);
+      
+      return data.success ? data.count : null;
+    } catch (error) {
+      console.error('❌ Failed to fetch processed orders count:', error);
+      return null;
+    }
+  }
+
+  // Get confirmed orders count
+  static async getConfirmedOrdersCount(token: string): Promise<number | null> {
+    try {
+      console.log('📋 Fetching confirmed orders count...');
+      
+      const response = await fetch(ORDER_COUNT_ENDPOINTS.CONFIRMED, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: OrderCountResponse = await response.json();
+      console.log('✅ Confirmed orders count fetched:', data.count);
+      
+      return data.success ? data.count : null;
+    } catch (error) {
+      console.error('❌ Failed to fetch confirmed orders count:', error);
+      return null;
+    }
   }
 
   // Format currency
