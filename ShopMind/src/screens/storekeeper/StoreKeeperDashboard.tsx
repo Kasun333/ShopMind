@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,27 @@ import {
   StatusBar,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../../types/User';
 import { OrderStats } from '../../types/Order';
+import { useNotifications } from '../../hooks/useNotifications';
+import InAppNotificationService from '../../services/inAppNotificationService';
+import StoreKeeperNotificationService from '../../services/storeKeeperNotificationService';
 
 const { width } = Dimensions.get('window');
+
+interface Activity {
+  id: string;
+  text: string;
+  time: string;
+  type: 'order' | 'status' | 'alert' | 'delivery' | 'inventory' | 'user';
+  priority?: 'low' | 'medium' | 'high';
+  isNew?: boolean;
+  notificationId?: number;
+}
 
 interface StoreKeeperDashboardProps {
   user: User;
@@ -25,6 +39,63 @@ interface StoreKeeperDashboardProps {
 }
 
 const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token, setActiveTab }) => {
+  // State for activities
+  const [activities, setActivities] = useState<Activity[]>([
+    { id: '1', text: 'New order #ORD-2024-001 received', time: '5 min ago', type: 'order', priority: 'medium' },
+    { id: '2', text: 'Order #ORD-2024-002 marked as ready', time: '15 min ago', type: 'status', priority: 'low' },
+    { id: '3', text: 'Low stock alert: Wireless Headphones', time: '1 hour ago', type: 'alert', priority: 'high' },
+    { id: '4', text: 'Order #ORD-2024-003 delivered', time: '2 hours ago', type: 'delivery', priority: 'low' },
+  ]);
+
+  // Demo mode state
+  const [demoMode, setDemoMode] = useState(false);
+
+  // Real-time notifications hook
+  const { 
+    notifications, 
+    isLoading,
+    unreadCount
+  } = useNotifications(user.id, token);
+
+  // Initialize notification system
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        await InAppNotificationService.initialize();
+        console.log('🏪 StoreKeeper dashboard notifications initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize dashboard notifications:', error);
+      }
+    };
+
+    initNotifications();
+  }, [user.id, token]);
+
+  // Convert notifications to activities
+  useEffect(() => {
+    if (notifications && notifications.length > 0) {
+      const newActivities = notifications
+        .slice(0, 10) // Show only recent 10
+        .map(notification => ({
+          id: `notif-${notification.id}`,
+          text: notification.message,
+          time: formatNotificationTime(notification.createdAt),
+          type: mapNotificationTypeToActivity(notification.type),
+          priority: getNotificationPriority(notification.type),
+          isNew: !notification.isRead,
+          notificationId: notification.id,
+        }));
+
+      // Merge with existing activities, keeping newest first
+      setActivities(prevActivities => {
+        const existingIds = new Set(prevActivities.map(a => a.notificationId));
+        const filteredNew = newActivities.filter(a => !existingIds.has(a.notificationId));
+        
+        return [...filteredNew, ...prevActivities].slice(0, 15); // Keep max 15 activities
+      });
+    }
+  }, [notifications]);
+
   // Hardcoded stats for demonstration
   const stats: OrderStats = {
     totalOrders: 156,
@@ -42,12 +113,76 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     { id: '4', title: 'Reports', icon: 'bar-chart-outline', color: '#065F46' },
   ];
 
-  const recentActivities = [
-    { id: '1', text: 'New order #ORD-2024-001 received', time: '5 min ago', type: 'order' },
-    { id: '2', text: 'Order #ORD-2024-002 marked as ready', time: '15 min ago', type: 'status' },
-    { id: '3', text: 'Low stock alert: Wireless Headphones', time: '1 hour ago', type: 'alert' },
-    { id: '4', text: 'Order #ORD-2024-003 delivered', time: '2 hours ago', type: 'delivery' },
-  ];
+  // Helper functions
+  const formatNotificationTime = (createdAt: string): string => {
+    const now = new Date();
+    const notificationTime = new Date(createdAt);
+    const diffInMinutes = Math.floor((now.getTime() - notificationTime.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hour${Math.floor(diffInMinutes / 60) > 1 ? 's' : ''} ago`;
+    return `${Math.floor(diffInMinutes / 1440)} day${Math.floor(diffInMinutes / 1440) > 1 ? 's' : ''} ago`;
+  };
+
+  const mapNotificationTypeToActivity = (type: string): Activity['type'] => {
+    switch (type.toLowerCase()) {
+      case 'order_new':
+      case 'order_received':
+      case 'order': 
+        return 'order';
+      case 'order_completed':
+      case 'order_ready':
+      case 'status':
+        return 'status';
+      case 'inventory_low':
+      case 'stock_alert':
+      case 'alert':
+        return 'alert';
+      case 'order_delivered':
+      case 'delivery':
+        return 'delivery';
+      case 'inventory_updated':
+      case 'product_added':
+        return 'inventory';
+      case 'user_registered':
+      case 'user':
+        return 'user';
+      default:
+        return 'status';
+    }
+  };
+
+  const getNotificationPriority = (type: string): Activity['priority'] => {
+    switch (type.toLowerCase()) {
+      case 'inventory_low':
+      case 'stock_alert':
+      case 'order_cancelled':
+        return 'high';
+      case 'order_new':
+      case 'order_received':
+        return 'medium';
+      default:
+        return 'low';
+    }
+  };
+
+  // Memoized sorted activities
+  const sortedActivities = useMemo(() => {
+    return [...activities].sort((a, b) => {
+      // Sort by priority first, then by newness
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      const priorityDiff = (priorityOrder[b.priority || 'low'] || 1) - (priorityOrder[a.priority || 'low'] || 1);
+      
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Then by new status
+      if (a.isNew && !b.isNew) return -1;
+      if (!a.isNew && b.isNew) return 1;
+      
+      return 0;
+    });
+  }, [activities]);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -55,7 +190,59 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
       case 'status': return 'checkmark-circle-outline';
       case 'alert': return 'alert-circle-outline';
       case 'delivery': return 'car-outline';
+      case 'inventory': return 'cube-outline';
+      case 'user': return 'person-outline';
       default: return 'document-text-outline';
+    }
+  };
+
+  const getActivityIconColor = (activity: Activity) => {
+    if (activity.isNew) {
+      switch (activity.priority) {
+        case 'high': return '#DC2626'; // Red for urgent
+        case 'medium': return '#D97706'; // Orange for medium
+        case 'low': return '#059669'; // Green for low
+        default: return '#059669';
+      }
+    }
+    
+    // Non-new activities get muted colors
+    switch (activity.type) {
+      case 'alert': return '#EF4444';
+      case 'order': return '#10B981';
+      case 'status': return '#3B82F6';
+      case 'delivery': return '#8B5CF6';
+      case 'inventory': return '#F59E0B';
+      case 'user': return '#6B7280';
+      default: return '#6B7280';
+    }
+  };
+
+  const handleActivityPress = (activity: Activity) => {
+    // Handle activity press based on type
+    console.log('🎯 Activity pressed:', activity);
+    
+    // Mark as read if it's a new notification
+    if (activity.isNew && activity.notificationId) {
+      setActivities(prev => 
+        prev.map(a => 
+          a.id === activity.id ? { ...a, isNew: false } : a
+        )
+      );
+    }
+
+    // Navigate based on activity type
+    switch (activity.type) {
+      case 'order':
+        setActiveTab?.('orders');
+        break;
+      case 'inventory':
+      case 'alert':
+        setActiveTab?.('inventory');
+        break;
+      default:
+        // Show more details or navigate to relevant screen
+        break;
     }
   };
 
@@ -79,7 +266,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
   };
 
   const currentDate = "2025-08-18 18:07:23";
-  const username = "Kasun333";
+  const username = user.username || user.fullName || "StoreKeeper";
 
   return (
     <View style={styles.rootContainer}>
@@ -261,35 +448,110 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
 
           {/* Recent Activities */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              <Ionicons name="time-outline" size={20} color="#047857" /> Recent Activities
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                <Ionicons name="time-outline" size={20} color="#047857" /> Recent Activities
+              </Text>
+              <View style={styles.headerActions}>
+                <View style={styles.liveIndicator}>
+                  <View style={[styles.liveDot, { backgroundColor: isLoading ? '#F59E0B' : '#10B981' }]} />
+                  <Text style={styles.liveText}>LIVE</Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => StoreKeeperNotificationService.sendOrderNotification(`ORD-${Date.now()}`, 'new')}
+                  style={styles.demoButton}
+                >
+                  <Ionicons name="flash" size={12} color="#8B5CF6" />
+                </TouchableOpacity>
+              </View>
+            </View>
             <View style={styles.activitiesContainer}>
               <LinearGradient
                 colors={['#ECFDF5', '#D1FAE5']}
                 style={styles.activitiesGradient}
               >
-                {recentActivities.map((activity, index) => (
-                  <View key={activity.id} style={[
-                    styles.activityItem,
-                    index < recentActivities.length - 1 && styles.activityBorder
-                  ]}>
-                    <View style={[
-                      styles.activityIconContainer,
-                      activity.type === 'alert' ? styles.alertIcon : 
-                      activity.type === 'order' ? styles.orderIcon : 
-                      activity.type === 'status' ? styles.statusIcon : 
-                      styles.deliveryIcon
-                    ]}>
-                      <Ionicons name={getActivityIcon(activity.type)} size={18} color="#FFFFFF" />
+                {/* Real-time connection status */}
+                <View style={styles.connectionStatus}>
+                  <View style={[
+                    styles.connectionIndicator,
+                    { backgroundColor: isLoading ? '#F59E0B' : '#10B981' }
+                  ]} />
+                  <Text style={styles.connectionText}>
+                    {isLoading ? 'Connecting...' : 'Live Updates'}
+                  </Text>
+                  {unreadCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.badgeText}>{unreadCount}</Text>
                     </View>
-                    <View style={styles.activityContent}>
-                      <Text style={styles.activityText}>{activity.text}</Text>
-                      <Text style={styles.activityTime}>{activity.time}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                  )}
+                </View>
+
+                {/* Loading state */}
+                {isLoading && sortedActivities.length === 0 ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#047857" />
+                    <Text style={styles.loadingText}>Loading activities...</Text>
                   </View>
-                ))}
+                ) : (
+                  <>
+                    {sortedActivities.map((activity: Activity, index: number) => (
+                      <TouchableOpacity 
+                        key={activity.id} 
+                        style={[
+                          styles.activityItem,
+                          index < sortedActivities.length - 1 && styles.activityBorder,
+                          activity.isNew && styles.newActivityItem
+                        ]}
+                        onPress={() => handleActivityPress(activity)}
+                      >
+                        <View style={[
+                          styles.activityIconContainer,
+                          { backgroundColor: getActivityIconColor(activity) }
+                        ]}>
+                          <Ionicons 
+                            name={getActivityIcon(activity.type)} 
+                            size={18} 
+                            color="#FFFFFF" 
+                          />
+                        </View>
+                        <View style={styles.activityContent}>
+                          <Text style={[
+                            styles.activityText,
+                            activity.isNew && styles.newActivityText
+                          ]}>
+                            {activity.text}
+                          </Text>
+                          <View style={styles.activityMeta}>
+                            <Text style={styles.activityTime}>{activity.time}</Text>
+                            {activity.priority === 'high' && (
+                              <View style={styles.priorityBadge}>
+                                <Ionicons name="alert" size={12} color="#DC2626" />
+                                <Text style={styles.priorityText}>Urgent</Text>
+                              </View>
+                            )}
+                            {activity.isNew && (
+                              <View style={styles.newBadge}>
+                                <Text style={styles.newBadgeText}>NEW</Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* Empty state */}
+                    {sortedActivities.length === 0 && !isLoading && (
+                      <View style={styles.emptyState}>
+                        <Ionicons name="time-outline" size={48} color="#9CA3AF" />
+                        <Text style={styles.emptyStateText}>No recent activities</Text>
+                        <Text style={styles.emptyStateSubtext}>
+                          New notifications will appear here in real-time
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )}
               </LinearGradient>
             </View>
           </View>
@@ -620,6 +882,152 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     marginBottom: 4,
+  },
+  // Real-time notification styles
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  connectionIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  connectionText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+    flex: 1,
+  },
+  notificationBadge: {
+    backgroundColor: '#DC2626',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  newActivityItem: {
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#3B82F6',
+  },
+  newActivityText: {
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  activityMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  priorityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  priorityText: {
+    fontSize: 10,
+    color: '#DC2626',
+    fontWeight: '600',
+    marginLeft: 2,
+  },
+  newBadge: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  newBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginTop: 12,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 20,
+  },
+  // Section header styles
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
+  },
+  liveText: {
+    fontSize: 10,
+    color: '#10B981',
+    fontWeight: 'bold',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  demoButton: {
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
