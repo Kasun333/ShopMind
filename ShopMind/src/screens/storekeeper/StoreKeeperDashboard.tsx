@@ -19,6 +19,7 @@ import { useNotifications } from '../../hooks/useNotifications';
 import InAppNotificationService from '../../services/inAppNotificationService';
 import StoreKeeperNotificationService from '../../services/storeKeeperNotificationService';
 import RevenueService, { TodayRevenue, MonthlyRevenue } from '../../services/revenueService';
+import dashboardCacheService from '../../services/dashboardCacheService';
 
 const { width } = Dimensions.get('window');
 
@@ -59,6 +60,7 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
   const [confirmedOrdersCount, setConfirmedOrdersCount] = useState<number | null>(null);
   const [orderCountsLoading, setOrderCountsLoading] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isDataFromCache, setIsDataFromCache] = useState<boolean>(false);
 
   // Demo mode state
   const [demoMode, setDemoMode] = useState(false);
@@ -71,11 +73,37 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
   } = useNotifications(user.id, token);
 
   // Fetch revenue and order count data
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (forceRefresh: boolean = false) => {
     try {
       setRevenueLoading(true);
       setOrderCountsLoading(true);
       setRevenueError(null);
+      
+      // Try to get cached data first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedData = await dashboardCacheService.getCachedDashboardData();
+        if (cachedData) {
+          console.log('📦 Loading from cache:', cachedData);
+          
+          // Set data from cache
+          setTodayRevenue(cachedData.todayRevenue);
+          setMonthlyRevenue(cachedData.monthlyRevenue);
+          setProcessedOrdersCount(cachedData.processedOrdersCount);
+          setConfirmedOrdersCount(cachedData.confirmedOrdersCount);
+          setLastUpdated(new Date(cachedData.lastUpdated));
+          setIsDataFromCache(true);
+          
+          setRevenueLoading(false);
+          setOrderCountsLoading(false);
+          
+          console.log('✅ Dashboard data loaded from cache');
+          return;
+        }
+      }
+      
+      // Fetch fresh data from API
+      console.log('🌐 Fetching fresh data from API...');
+      setIsDataFromCache(false);
       
       console.log('� Fetching dashboard data...');
       
@@ -108,6 +136,18 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
         setConfirmedOrdersCount(confirmedCount);
         console.log('✅ Confirmed orders count loaded:', confirmedCount);
       }
+
+      // Cache the fresh data
+      const dashboardData = {
+        todayRevenue: todayData,
+        monthlyRevenue: monthlyData,
+        processedOrdersCount: processedCount,
+        confirmedOrdersCount: confirmedCount,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      await dashboardCacheService.cacheDashboardData(dashboardData);
+      console.log('💾 Dashboard data cached successfully');
 
     } catch (error) {
       console.error('❌ Failed to fetch dashboard data:', error);
@@ -367,16 +407,34 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
             <Text style={styles.userName}>{user.fullName}</Text>
             <Text style={styles.userRole}>Store Manager</Text>
           </View>
-          <View style={styles.profileContainer}>
-            <LinearGradient
-              colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
-              style={styles.profileBadge}
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => fetchDashboardData(true)}
+              style={styles.refreshButton}
+              disabled={revenueLoading || orderCountsLoading}
             >
-              <Text style={styles.profileText}>
-                {user.fullName.split(' ').map(name => name[0]).join('').toUpperCase()}
-              </Text>
-            </LinearGradient>
-            <View style={styles.statusIndicator} />
+              <Ionicons 
+                name="refresh-outline" 
+                size={20} 
+                color="rgba(255,255,255,0.9)" 
+              />
+              {isDataFromCache && (
+                <View style={styles.cacheIndicator}>
+                  <Text style={styles.cacheText}>📦</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={styles.profileContainer}>
+              <LinearGradient
+                colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                style={styles.profileBadge}
+              >
+                <Text style={styles.profileText}>
+                  {user.fullName.split(' ').map(name => name[0]).join('').toUpperCase()}
+                </Text>
+              </LinearGradient>
+              <View style={styles.statusIndicator} />
+            </View>
           </View>
         </View>
         
@@ -1254,7 +1312,8 @@ const styles = StyleSheet.create({
   refreshButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(4, 120, 87, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    position: 'relative',
   },
   insightsContainer: {
     borderRadius: 16,
@@ -1315,6 +1374,27 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 2,
     fontStyle: 'italic',
+  },
+  // Header actions styles
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cacheIndicator: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cacheText: {
+    fontSize: 8,
+    color: 'white',
   },
 });
 
