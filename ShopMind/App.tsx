@@ -6,6 +6,7 @@ import SignupScreen from './src/screens/SignupScreen';
 import DriverScreen from './src/screens/DriverScreen';
 import EcommerceScreen from './src/screens/EcommerceScreen';
 import StoreKeeperScreen from './src/screens/StoreKeeperScreen';
+import ToastComponent from './src/components/ToastComponent';
 import { User } from './src/types/User';
 import { initializeStripe } from './src/services/stripeService';
 
@@ -97,6 +98,8 @@ export default function App() {
               return <EcommerceScreen user={user} token={token} onLogout={handleLogout} />;
           }
         })()}
+        {/* Toast notifications overlay */}
+        <ToastComponent />
       </StripeProvider>
     </SafeAreaView>
   );

@@ -5,7 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import UserOrdersComponent from '../components/UserOrdersComponent';
 import NotificationCard from '../components/NotificationCard';
 import useNotifications from '../hooks/useNotifications';
+import useAppStateNotifications from '../hooks/useAppStateNotifications';
 import notificationService, { Notification } from '../services/notificationService';
+import InAppNotificationService from '../services/inAppNotificationService';
 
 const { width } = Dimensions.get('window');
 
@@ -40,6 +42,21 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
 
   // Add debug state
   const [showDebug, setShowDebug] = useState(false);
+
+  // Use app state notifications for background/foreground handling
+  const {
+    notificationPermissions,
+    testLocalNotification,
+    clearAllNotifications: clearLocalNotifications,
+    manualCheckMissed,
+    isAppActive
+  } = useAppStateNotifications({
+    userId: user.id,
+    onMissedNotifications: (missed) => {
+      console.log('📬 Received missed notifications:', missed.length);
+      // You could add these to your notifications state here
+    }
+  });
   
   const conversations = [
     {
@@ -306,7 +323,14 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
             <View style={styles.statusRow}>
               <View style={[styles.connectionDot, { backgroundColor: connected ? '#10B981' : '#EF4444' }]} />
               <Text style={styles.connectionText}>
-                {connected ? '🟢 Connected to real-time notifications' : '🔴 Disconnected from real-time'}
+                              <View style={styles.connectionInfo}>
+                <Text style={styles.connectionText}>
+                  {connected ? '🟢 Real-time connected' : '🔴 Real-time disconnected'}
+                </Text>
+                <Text style={styles.permissionText}>
+                  {notificationPermissions ? '� Local notifications enabled' : '❌ No notification permissions'}
+                </Text>
+              </View>
               </Text>
               {!connected && (
                 <TouchableOpacity onPress={forceReconnect} style={styles.reconnectButton}>
@@ -360,7 +384,12 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
               
               <TouchableOpacity onPress={sendTestNotification} style={styles.testButton}>
                 <Ionicons name="flask-outline" size={16} color="#2A7CC7" />
-                <Text style={styles.testButtonText}>Test</Text>
+                <Text style={styles.testButtonText}>WS Test</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity onPress={testLocalNotification} style={styles.localTestButton}>
+                <Ionicons name="phone-portrait-outline" size={16} color="#10B981" />
+                <Text style={styles.localTestButtonText}>Local</Text>
               </TouchableOpacity>
               
               {notifications.length > 0 && (
@@ -742,11 +771,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: 8,
   },
+  connectionInfo: {
+    flex: 1,
+  },
   connectionText: {
     fontSize: 14,
     color: '#374151',
     fontWeight: '500',
-    flex: 1,
+  },
+  permissionText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '400',
+    marginTop: 2,
   },
   reconnectButton: {
     paddingHorizontal: 12,
@@ -824,6 +861,22 @@ const styles = StyleSheet.create({
   testButtonText: {
     fontSize: 12,
     color: '#2A7CC7',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  localTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  localTestButtonText: {
+    fontSize: 12,
+    color: '#10B981',
     fontWeight: '600',
     marginLeft: 4,
   },
