@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { User } from '../../types/User';
 import RestockModal from '../../components/RestockModal';
 import { RestockResponse } from '../../services/restockService';
+import stockAlertsService, { StockAlert, StockAlertWithProduct } from '../../services/stockAlertsService';
 
 const { width } = Dimensions.get('window');
 
@@ -28,22 +29,70 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ user, token }) => {
   // Restock modal state
   const [showRestockModal, setShowRestockModal] = useState(false);
   
-  const inventoryStats = [
-    { title: 'Total Products', value: '1,234', color: '#059669', icon: 'cube-outline' },
-    { title: 'Low Stock', value: '23', color: '#EF4444', icon: 'alert-circle-outline' },
-    { title: 'Out of Stock', value: '5', color: '#F59E0B', icon: 'close-circle-outline' },
+  // Stock alerts state
+  const [stockAlerts, setStockAlerts] = useState<StockAlertWithProduct[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(true);
+  const [alertsError, setAlertsError] = useState<string | null>(null);
+  
+  // Dynamic inventory stats based on real data
+  const [inventoryStats, setInventoryStats] = useState([
+    { title: 'Total Products', value: '...', color: '#059669', icon: 'cube-outline' },
+    { title: 'Low Stock', value: '...', color: '#EF4444', icon: 'alert-circle-outline' },
+    { title: 'Out of Stock', value: '...', color: '#F59E0B', icon: 'close-circle-outline' },
     { title: 'Categories', value: '15', color: '#047857', icon: 'folder-outline' },
-  ];
-
-  const lowStockItems = [
-    { name: 'Wireless Headphones', stock: 5, threshold: 20 },
-    { name: 'Phone Cases', stock: 3, threshold: 15 },
-    { name: 'USB Cables', stock: 8, threshold: 25 },
-    { name: 'Bluetooth Speakers', stock: 2, threshold: 10 },
-  ];
+  ]);
 
   const currentDateTime = "2025-08-18 19:11:43";
   const currentUser = "Kasun333";
+
+  // Fetch stock alerts from API
+  const fetchStockAlerts = async () => {
+    try {
+      setAlertsLoading(true);
+      setAlertsError(null);
+      
+      console.log('📊 Fetching stock alerts for inventory screen...');
+      
+      const [alerts, stats] = await Promise.all([
+        stockAlertsService.getStockAlerts(token),
+        stockAlertsService.getInventoryStats(token)
+      ]);
+
+      // Format alerts for display
+      const formattedAlerts = alerts.map(alert => 
+        stockAlertsService.formatAlertForDisplay(alert)
+      );
+      
+      setStockAlerts(formattedAlerts);
+      
+      // Update inventory stats with real data
+      setInventoryStats(prev => prev.map(stat => {
+        switch (stat.title) {
+          case 'Low Stock':
+            return { ...stat, value: stats.lowStockCount.toString() };
+          case 'Out of Stock':
+            return { ...stat, value: stats.outOfStockCount.toString() };
+          case 'Total Products':
+            return { ...stat, value: '1,234' }; // Keep static for now
+          default:
+            return stat;
+        }
+      }));
+      
+      console.log('✅ Stock alerts loaded successfully:', formattedAlerts.length, 'alerts');
+      
+    } catch (error) {
+      console.error('❌ Failed to fetch stock alerts:', error);
+      setAlertsError('Failed to load stock alerts');
+    } finally {
+      setAlertsLoading(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchStockAlerts();
+  }, [token]);
 
   // Restock handlers
   const handleRestockPress = () => {
@@ -60,8 +109,8 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ user, token }) => {
       [{ text: 'OK' }]
     );
     
-    // TODO: Refresh inventory data here
-    // You might want to call a refresh function or update local state
+    // Refresh stock alerts after successful restock
+    fetchStockAlerts();
   };
 
   const handleRestockClose = () => {
@@ -199,10 +248,23 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ user, token }) => {
 
         {/* Low Stock Alerts */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="alert-circle-outline" size={20} color="#047857" style={styles.sectionIcon} />
-            Low Stock Alerts
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="alert-circle-outline" size={20} color="#047857" style={styles.sectionIcon} />
+              Low Stock Alerts
+            </Text>
+            <TouchableOpacity 
+              onPress={fetchStockAlerts} 
+              style={styles.refreshButton}
+              disabled={alertsLoading}
+            >
+              <Ionicons 
+                name={alertsLoading ? "hourglass-outline" : "refresh-outline"} 
+                size={18} 
+                color="#047857" 
+              />
+            </TouchableOpacity>
+          </View>
           <View style={styles.alertsContainer}>
             <LinearGradient
               colors={['#ECFDF5', '#D1FAE5']}
@@ -210,33 +272,72 @@ const InventoryScreen: React.FC<InventoryScreenProps> = ({ user, token }) => {
               end={{ x: 1, y: 1 }}
               style={styles.alertsGradient}
             >
-              {lowStockItems.map((item, index) => (
-                <View key={index} style={[
-                  styles.alertItem,
-                  index < lowStockItems.length - 1 && styles.alertItemBorder
-                ]}>
-                  <View style={styles.alertInfo}>
-                    <Text style={styles.alertName}>{item.name}</Text>
-                    <Text style={styles.alertStock}>
-                      <Ionicons name="cube-outline" size={14} color="#64748B" /> Current: {item.stock} | Threshold: {item.threshold}
-                    </Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.restockButtonContainer} 
-                    activeOpacity={0.8}
-                    onPress={handleRestockPress}
-                  >
-                    <LinearGradient
-                      colors={['#059669', '#047857']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.restockButton}
-                    >
-                      <Text style={styles.restockButtonText}>Restock</Text>
-                    </LinearGradient>
+              {alertsLoading ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Loading alerts...</Text>
+                </View>
+              ) : alertsError ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{alertsError}</Text>
+                  <TouchableOpacity onPress={fetchStockAlerts} style={styles.retryButton}>
+                    <Text style={styles.retryText}>Retry</Text>
                   </TouchableOpacity>
                 </View>
-              ))}
+              ) : stockAlerts.length === 0 ? (
+                <View style={styles.noAlertsContainer}>
+                  <Ionicons name="checkmark-circle-outline" size={32} color="#059669" />
+                  <Text style={styles.noAlertsText}>No stock alerts</Text>
+                  <Text style={styles.noAlertsSubtext}>All products are well stocked!</Text>
+                </View>
+              ) : (
+                stockAlerts.map((alert, index) => (
+                  <View key={alert.alertId} style={[
+                    styles.alertItem,
+                    index < stockAlerts.length - 1 && styles.alertItemBorder
+                  ]}>
+                    <View style={styles.alertInfo}>
+                      <View style={styles.alertHeader}>
+                        <Text style={styles.alertName}>{alert.productName}</Text>
+                        <View style={[styles.alertTypeBadge, 
+                          alert.alertType === 'OUT_OF_STOCK' ? styles.outOfStockBadge : styles.lowStockBadge
+                        ]}>
+                          <Text style={styles.alertTypeText}>
+                            {alert.alertType === 'OUT_OF_STOCK' ? 'OUT OF STOCK' : 'LOW STOCK'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.alertStock}>
+                        <Ionicons name="cube-outline" size={14} color="#64748B" /> 
+                        {alert.alertType === 'OUT_OF_STOCK' 
+                          ? 'Stock: 0' 
+                          : `Current: ${alert.currentStock || 0} | Threshold: ${alert.threshold || 'N/A'}`
+                        }
+                      </Text>
+                      <Text style={styles.alertTime}>
+                        <Ionicons name="time-outline" size={12} color="#9CA3AF" /> 
+                        {stockAlertsService.formatTimeSince(alert.createdAt)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity 
+                      style={styles.restockButtonContainer} 
+                      activeOpacity={0.8}
+                      onPress={handleRestockPress}
+                    >
+                      <LinearGradient
+                        colors={alert.alertType === 'OUT_OF_STOCK' 
+                          ? ['#EF4444', '#DC2626'] 
+                          : ['#059669', '#047857']
+                        }
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.restockButton}
+                      >
+                        <Text style={styles.restockButtonText}>Restock</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
             </LinearGradient>
           </View>
         </View>
@@ -389,12 +490,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#047857',
-    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
   sectionIcon: {
     marginRight: 6,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(4, 120, 87, 0.1)',
   },
   actionsGrid: {
     flexDirection: 'row',
@@ -452,25 +563,103 @@ const styles = StyleSheet.create({
   },
   alertItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 16,
+    paddingHorizontal: 4,
   },
   alertItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(5, 150, 105, 0.1)',
+    borderBottomColor: 'rgba(16, 185, 129, 0.1)',
   },
   alertInfo: {
     flex: 1,
+    marginRight: 12,
+  },
+  alertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    flexWrap: 'wrap',
   },
   alertName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 4,
+    color: '#1F2937',
+    marginRight: 8,
+  },
+  alertTypeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  lowStockBadge: {
+    backgroundColor: '#FEF3C7',
+  },
+  outOfStockBadge: {
+    backgroundColor: '#FEE2E2',
+  },
+  alertTypeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#92400E',
   },
   alertStock: {
     fontSize: 14,
     color: '#64748B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  alertTime: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  errorContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  retryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#059669',
+    borderRadius: 4,
+  },
+  retryText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  noAlertsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noAlertsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#059669',
+    marginTop: 8,
+  },
+  noAlertsSubtext: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
   },
   restockButtonContainer: {
     borderRadius: 10,
