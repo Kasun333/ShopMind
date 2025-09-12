@@ -125,7 +125,7 @@ class StockAlertsService {
     return {
       ...alert,
       productName,
-      currentStock,
+      currentStock: currentStock !== null ? currentStock : undefined,
       // Set a default threshold based on alert type
       threshold: alert.alertType === 'LOW_STOCK' ? (currentStock || 0) + 10 : 0
     };
