@@ -26,27 +26,60 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [availableStatuses, setAvailableStatuses] = useState<string[]>(['ALL']);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const pageSize = 5;
 
   useEffect(() => {
-    fetchOrders();
+    // Reset pagination when userId changes
+    setCurrentPage(0);
+    setHasNextPage(true);
+    setOrders([]);
+    fetchOrders(true);
   }, [userId]);
 
   useEffect(() => {
     filterOrders();
   }, [orders, selectedStatus]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (forceRefresh: boolean = false, page: number = 0, isLoadMore: boolean = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
       setError(null);
-      const result = await UserOrderService.getUserOrders(userId, token);
+      console.log(`📋 Loading user orders... Page: ${page}, LoadMore: ${isLoadMore}`);
+      
+      const result = await UserOrderService.getPaginatedUserOrders(userId, token, page, pageSize);
       
       if (result.success) {
-        setOrders(result.orders);
-        const statuses = UserOrderService.getUniqueStatuses(result.orders);
-        setAvailableStatuses(statuses);
+        if (isLoadMore) {
+          // Append new orders to existing ones
+          setOrders(prevOrders => [...prevOrders, ...result.orders]);
+        } else {
+          // Replace orders for first load or refresh
+          setOrders(result.orders);
+          // Update available statuses only on first load
+          const statuses = UserOrderService.getUniqueStatuses(result.orders);
+          setAvailableStatuses(statuses);
+        }
+        
+        // Update pagination state
+        setCurrentPage(result.pagination.currentPage);
+        setHasNextPage(result.pagination.hasNext);
+        setTotalOrders(result.pagination.totalElements);
+        
+        console.log(`✅ User orders loaded successfully. Page: ${page}, HasNext: ${result.pagination.hasNext}`);
       } else {
         setError(result.message);
       }
@@ -54,14 +87,36 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
       setError('Failed to load orders');
       console.error('Error fetching orders:', error);
     } finally {
-      setLoading(false);
+      if (isLoadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchOrders();
+    setCurrentPage(0);
+    setHasNextPage(true);
+    setOrders([]);
+    await fetchOrders(true, 0, false);
     setRefreshing(false);
+  };
+
+  const loadMoreOrders = () => {
+    if (!loadingMore && hasNextPage && !loading) {
+      const nextPage = currentPage + 1;
+      console.log(`📄 Loading more user orders... Next page: ${nextPage}`);
+      fetchOrders(false, nextPage, true);
+    }
+  };
+
+  const handleRetry = () => {
+    setCurrentPage(0);
+    setHasNextPage(true);
+    setOrders([]);
+    fetchOrders(true, 0, false);
   };
 
   const filterOrders = () => {
@@ -169,6 +224,17 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
     </View>
   );
 
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    
+    return (
+      <View style={styles.footerContainer}>
+        <ActivityIndicator size="small" color="#2A7CC7" />
+        <Text style={styles.footerText}>Loading more orders...</Text>
+      </View>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -184,7 +250,7 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
         <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
         <Text style={styles.errorTitle}>Failed to Load Orders</Text>
         <Text style={styles.errorMessage}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchOrders}>
+        <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -197,7 +263,10 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>My Orders</Text>
         <Text style={styles.orderCount}>
-          {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'}
+          {filteredOrders.length} of {totalOrders > 0 ? totalOrders : orders.length} orders
+          {hasNextPage && (
+            <Text style={styles.moreIndicator}> • More available</Text>
+          )}
         </Text>
       </View>
 
@@ -222,6 +291,9 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={renderEmptyState}
+        ListFooterComponent={renderFooter}
+        onEndReached={loadMoreOrders}
+        onEndReachedThreshold={0.1}
         contentContainerStyle={filteredOrders.length === 0 ? styles.emptyList : styles.ordersListContent}
         style={styles.ordersList}
       />
@@ -469,6 +541,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 40,
+  },
+  moreIndicator: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  footerContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  footerText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#64748B',
   },
 });
 

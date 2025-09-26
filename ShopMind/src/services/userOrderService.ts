@@ -29,9 +29,26 @@ export interface UserOrdersResponse {
   totalOrders: number;
 }
 
+export interface PaginatedUserOrdersResponse {
+  success: boolean;
+  message: string;
+  orders: Order[];
+  totalOrders: number;
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalElements: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+    isFirst: boolean;
+    isLast: boolean;
+  };
+}
+
 export class UserOrderService {
   /**
-   * Fetch orders for a specific user
+   * Fetch orders for a specific user - Legacy method
    */
   static async getUserOrders(userId: number, token: string): Promise<UserOrdersResponse> {
     try {
@@ -67,6 +84,85 @@ export class UserOrderService {
         message: 'Could not connect to server',
         orders: [],
         totalOrders: 0,
+      };
+    }
+  }
+
+  /**
+   * Fetch paginated orders for a specific user
+   */
+  static async getPaginatedUserOrders(
+    userId: number, 
+    token: string, 
+    page: number = 0, 
+    size: number = 5
+  ): Promise<PaginatedUserOrdersResponse> {
+    try {
+      // Ensure size doesn't exceed maximum
+      const pageSize = Math.min(size, 100);
+      
+      const response = await fetch(`${ORDER_API_URL}/api/orders/user/${userId}?page=${page}&size=${pageSize}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || 'Failed to fetch orders',
+          orders: [],
+          totalOrders: 0,
+          pagination: {
+            currentPage: page,
+            pageSize: pageSize,
+            totalElements: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrevious: false,
+            isFirst: true,
+            isLast: true,
+          },
+        };
+      }
+
+      return {
+        success: data.success,
+        message: data.message,
+        orders: data.orders || [],
+        totalOrders: data.totalOrders || 0,
+        pagination: data.pagination || {
+          currentPage: page,
+          pageSize: pageSize,
+          totalElements: data.totalOrders || 0,
+          totalPages: Math.ceil((data.totalOrders || 0) / pageSize),
+          hasNext: false,
+          hasPrevious: false,
+          isFirst: true,
+          isLast: true,
+        },
+      };
+    } catch (error) {
+      console.error('Error fetching paginated user orders:', error);
+      return {
+        success: false,
+        message: 'Could not connect to server',
+        orders: [],
+        totalOrders: 0,
+        pagination: {
+          currentPage: page,
+          pageSize: size,
+          totalElements: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrevious: false,
+          isFirst: true,
+          isLast: true,
+        },
       };
     }
   }
