@@ -1,7 +1,7 @@
 // API Configuration
 // Change the IP address here when connecting to a different network
 export const API_CONFIG = {
-  BASE_IP: '10.185.131.210', // Change this IP when network changes
+  BASE_IP: '10.52.239.210', // Change this IP when network changes
   
   // Service endpoints
   AUTH_SERVICE: {
@@ -68,7 +68,46 @@ export const ORDER_COUNT_ENDPOINTS = {
   CONFIRMED: `${ORDER_API_URL}/api/orders/count/confirmed`,
 };
 
+// Paginated orders API endpoints
+export const PAGINATED_ORDERS_ENDPOINTS = {
+  BASE: `${ORDER_API_URL}/api/orders/all`,
+  BY_STATUS: (status: string) => `${ORDER_API_URL}/api/orders/all/${status}`,
+  WITH_PAGINATION: (status: string, page: number = 0, size: number = 10) => 
+    `${ORDER_API_URL}/api/orders/all/${status}?page=${page}&size=${size}`,
+};
+
 // Stock alerts API endpoints
 export const STOCK_ALERTS_ENDPOINTS = {
   GET_ALERTS: `${STOCK_ALERTS_API_URL}/api/stock-alerts`,
+};
+
+// TypeScript types for paginated orders response
+export interface PaginationInfo {
+  currentPage: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  isFirst: boolean;
+  isLast: boolean;
+}
+
+export interface PaginatedOrdersResponse<T = any> {
+  success: boolean;
+  message: string;
+  orders: T[];
+  totalOrders: number;
+  pagination: PaginationInfo;
+}
+
+// Helper function for building paginated orders URLs
+export const buildPaginatedOrdersUrl = (
+  status: string, 
+  page: number = 0, 
+  size: number = 10
+): string => {
+  // Ensure size doesn't exceed maximum of 100
+  const validatedSize = Math.min(size, 100);
+  return PAGINATED_ORDERS_ENDPOINTS.WITH_PAGINATION(status, page, validatedSize);
 };

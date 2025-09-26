@@ -10,9 +10,26 @@ export interface OrdersResponse {
   totalOrders: number;
 }
 
+export interface PaginatedOrdersResponse {
+  success: boolean;
+  message: string;
+  orders: Order[];
+  totalOrders: number;
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalElements: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+    isFirst: boolean;
+    isLast: boolean;
+  };
+}
+
 export const orderService = {
   /**
-   * Fetch orders by status (Confirmed or Processed)
+   * Fetch orders by status (Confirmed or Processed) - Legacy method
    */
   async getOrdersByStatus(status: string, token: string): Promise<OrdersResponse> {
     try {
@@ -31,6 +48,39 @@ export const orderService = {
       return data;
     } catch (error) {
       console.error('Error fetching orders by status:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch paginated orders by status (Confirmed or Processed)
+   */
+  async getPaginatedOrdersByStatus(
+    status: string, 
+    token: string, 
+    page: number = 0, 
+    size: number = 10
+  ): Promise<PaginatedOrdersResponse> {
+    try {
+      // Ensure size doesn't exceed maximum
+      const pageSize = Math.min(size, 100);
+      
+      const response = await fetch(`${BASE_URL}/orders/all/${status}?page=${page}&size=${pageSize}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: PaginatedOrdersResponse = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching paginated orders by status:', error);
       throw error;
     }
   },

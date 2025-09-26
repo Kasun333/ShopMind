@@ -35,31 +35,47 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filters, setFilters] = useState<OrderFilters>({});
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showProcessOrder, setShowProcessOrder] = useState(false);
   const [orderTab, setOrderTab] = useState<'CONFIRMED' | 'PROCESSED'>('CONFIRMED');
   const [isDataFromCache, setIsDataFromCache] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const pageSize = 10;
 
   const currentDate = "2025-08-18 18:18:12";
   const username = "Kasun333";
 
   useEffect(() => {
-    loadOrders(orderTab);
+    // Reset pagination when tab changes
+    setCurrentPage(0);
+    setHasNextPage(true);
+    setOrders([]);
+    loadOrders(orderTab, true); // Force refresh for new tab
   }, [orderTab]);
 
   useEffect(() => {
     applyFilters();
   }, [orders, filters]);
 
-  const loadOrders = async (status: 'CONFIRMED' | 'PROCESSED', forceRefresh: boolean = false) => {
-    setLoading(true);
+  const loadOrders = async (status: 'CONFIRMED' | 'PROCESSED', forceRefresh: boolean = false, page: number = 0, isLoadMore: boolean = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
-      console.log(`📋 Loading ${status} orders...`);
+      console.log(`📋 Loading ${status} orders... Page: ${page}, LoadMore: ${isLoadMore}`);
       
-      // Try to get cached data first (unless force refresh)
-      if (!forceRefresh) {
+      // For refresh or first load, try cache first (unless force refresh)
+      if (!forceRefresh && page === 0 && !isLoadMore) {
         const cachedOrders = await ordersCacheService.getCachedOrdersByStatus(status);
         if (cachedOrders && cachedOrders.length > 0) {
           console.log(`📦 Loading ${status} orders from cache:`, cachedOrders.length);
@@ -87,11 +103,11 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
         }
       }
       
-      // Fetch fresh data from API
-      console.log(`🌐 Fetching fresh ${status} orders from API...`);
+      // Fetch fresh data from paginated API
+      console.log(`🌐 Fetching fresh ${status} orders from API... Page: ${page}`);
       setIsDataFromCache(false);
       
-      const response = await orderService.getOrdersByStatus(status, token);
+      const response = await orderService.getPaginatedOrdersByStatus(status, token, page, pageSize);
       if (response.success) {
         const ordersWithDefaults = response.orders.map(order => ({
           ...order,
@@ -105,12 +121,27 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
           estimatedDeliveryTime: '30-45 minutes',
         }));
         
-        setOrders(ordersWithDefaults);
+        if (isLoadMore) {
+          // Append new orders to existing ones
+          setOrders(prevOrders => [...prevOrders, ...ordersWithDefaults]);
+        } else {
+          // Replace orders for first load or refresh
+          setOrders(ordersWithDefaults);
+        }
+        
+        // Update pagination state
+        setCurrentPage(response.pagination.currentPage);
+        setHasNextPage(response.pagination.hasNext);
+        setTotalOrders(response.pagination.totalElements);
         setLastUpdated(new Date());
         
-        // Cache the fresh data
-        await ordersCacheService.cacheOrdersByStatus(status, ordersWithDefaults);
-        console.log(`💾 ${status} orders cached successfully`);
+        // Cache the fresh data only for first page
+        if (page === 0) {
+          await ordersCacheService.cacheOrdersByStatus(status, ordersWithDefaults);
+          console.log(`💾 ${status} orders cached successfully`);
+        }
+        
+        console.log(`✅ ${status} orders loaded successfully. Page: ${page}, HasNext: ${response.pagination.hasNext}`);
         
       } else {
         Alert.alert('Error', 'Failed to load orders');
@@ -119,7 +150,11 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
       console.error('Error loading orders:', error);
       Alert.alert('Error', 'Failed to load orders. Please try again.');
     } finally {
-      setLoading(false);
+      if (isLoadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -186,12 +221,26 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
     setShowProcessOrder(false);
     setSelectedOrder(null);
     // Refresh orders to get updated status
-    loadOrders(orderTab);
+    setCurrentPage(0);
+    setHasNextPage(true);
+    setOrders([]);
+    loadOrders(orderTab, true, 0, false);
   };
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadOrders(orderTab, true).finally(() => setRefreshing(false)); // Force refresh
+    setCurrentPage(0);
+    setHasNextPage(true);
+    setOrders([]);
+    loadOrders(orderTab, true, 0, false).finally(() => setRefreshing(false)); // Force refresh
+  };
+
+  const loadMoreOrders = () => {
+    if (!loadingMore && hasNextPage && !loading) {
+      const nextPage = currentPage + 1;
+      console.log(`📄 Loading more orders... Next page: ${nextPage}`);
+      loadOrders(orderTab, false, nextPage, true);
+    }
   };
 
   const clearOrdersCache = async () => {
@@ -224,6 +273,17 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
       </Text>
     </View>
   );
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    
+    return (
+      <View style={styles.footerContainer}>
+        <ActivityIndicator size="small" color="#059669" />
+        <Text style={styles.footerText}>Loading more orders...</Text>
+      </View>
+    );
+  };
 
   if (loading && orders.length === 0) {
     return (
@@ -287,9 +347,12 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
                   <View>
                     <Text style={styles.title}>Manage Orders</Text>
                     <Text style={styles.subtitle}>
-                      {filteredOrders.length} of {orders.length} orders
+                      {filteredOrders.length} of {totalOrders > 0 ? totalOrders : orders.length} orders
                       {isDataFromCache && (
                         <Text style={styles.cacheIndicator}> 📦</Text>
+                      )}
+                      {hasNextPage && (
+                        <Text style={styles.moreIndicator}> • More available</Text>
                       )}
                     </Text>
                     {lastUpdated && (
@@ -305,7 +368,10 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
                       onPress={() => {
                         console.log('🔄 Manual refresh triggered');
                         setRefreshing(true);
-                        loadOrders(orderTab, true).finally(() => setRefreshing(false));
+                        setCurrentPage(0);
+                        setHasNextPage(true);
+                        setOrders([]);
+                        loadOrders(orderTab, true, 0, false).finally(() => setRefreshing(false));
                       }}
                       disabled={loading || refreshing}
                     >
@@ -386,6 +452,9 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
                     />
                   }
                   ListEmptyComponent={renderEmptyList}
+                  ListFooterComponent={renderFooter}
+                  onEndReached={loadMoreOrders}
+                  onEndReachedThreshold={0.1}
                 />
               </View>
             </View>
@@ -560,6 +629,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '500',
+  },
+  moreIndicator: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  footerContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  footerText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#64748B',
   },
 });
 
