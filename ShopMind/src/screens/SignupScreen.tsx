@@ -6,20 +6,16 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ScrollView, 
-  Dimensions, 
-  Animated,
+  Alert,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 // @ts-ignore
 import { EMAIL_VERIFIER_API_KEY } from '@env';
 import LocationPickerModal from '../components/LocationPickerModal';
 import ImagePickerComponent from '../components/ImagePickerComponent';
 import { AuthService } from '../services/authService';
-
-const { width, height } = Dimensions.get('window');
 
 interface SignupScreenProps {
   onSignupSuccess: () => void;
@@ -30,6 +26,7 @@ type FormDataType = {
   username: string;
   email: string;
   password: string;
+  confirmPassword: string;
   fullName: string;
   phoneNumber: string;
   profileImageUrl: string;
@@ -44,6 +41,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     username: '',
     email: '',
     password: '',
+    confirmPassword: '',
     fullName: '',
     phoneNumber: '',
     profileImageUrl: '',
@@ -53,45 +51,28 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     dateOfBirth: ''
   });
   
-  const [focusedInput, setFocusedInput] = useState<string | null>(null);
-  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
-  const [slideAnim] = useState(new Animated.Value(-300));
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const showToast = (message: string, type = 'success') => {
-    setToast({ visible: true, message, type });
-    
-    Animated.sequence([
-      Animated.timing(slideAnim, {
-        toValue: 20,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.delay(3000),
-      Animated.timing(slideAnim, {
-        toValue: -300,
-        duration: 300,
-        useNativeDriver: true,
-      })
-    ]).start(() => {
-      setToast({ visible: false, message: '', type: 'success' });
-    });
+  const showAlert = (title: string, message: string) => {
+    Alert.alert(title, message);
   };
 
   const verifyEmail = async () => {
     const email = formData.email.trim();
     
     if (!email) {
-      showToast('Please enter an email address', 'error');
+      showAlert('Error', 'Please enter an email address');
       return;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      showToast('Please enter a valid email address', 'error');
+      showAlert('Error', 'Please enter a valid email address');
       return;
     }
 
@@ -101,14 +82,14 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       
       if (isValid) {
         setIsEmailVerified(true);
-        showToast('Email verified successfully!', 'success');
+        showAlert('Success', 'Email verified successfully!');
       } else {
         setIsEmailVerified(false);
-        showToast('This email does not appear to exist or is not deliverable', 'error');
+        showAlert('Error', 'This email does not appear to exist or is not deliverable');
       }
     } catch (error) {
       console.error('Email verification error:', error);
-      showToast('Failed to verify email. Please try again.', 'error');
+      showAlert('Error', 'Failed to verify email. Please try again.');
       setIsEmailVerified(false);
     } finally {
       setIsVerifyingEmail(false);
@@ -122,7 +103,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       latitude: location.latitude.toString(),
       longitude: location.longitude.toString(),
     }));
-    showToast('Location selected successfully!', 'success');
+    showAlert('Success', 'Location selected successfully!');
   };
 
   const handleImageUpload = (imageUrl: string) => {
@@ -130,101 +111,111 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       ...prev,
       profileImageUrl: imageUrl,
     }));
-    showToast('Profile image uploaded successfully!', 'success');
+    showAlert('Success', 'Profile image uploaded successfully!');
   };
 
   const validateForm = () => {
-    const { username, email, password, fullName, phoneNumber, formattedAddress, dateOfBirth } = formData;
+    const { username, email, password, confirmPassword, fullName, phoneNumber, formattedAddress, dateOfBirth } = formData;
     
     // Full name validation
     if (!fullName.trim()) {
-      showToast('Full name is required', 'error');
+      showAlert('Error', 'Full name is required');
       return false;
     }
     if (fullName.trim().length < 2) {
-      showToast('Full name must be at least 2 characters', 'error');
+      showAlert('Error', 'Full name must be at least 2 characters');
       return false;
     }
     
     // Username validation
     if (!username.trim()) {
-      showToast('Username is required', 'error');
+      showAlert('Error', 'Username is required');
       return false;
     }
     if (username.trim().length < 3) {
-      showToast('Username must be at least 3 characters', 'error');
+      showAlert('Error', 'Username must be at least 3 characters');
       return false;
     }
     if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
-      showToast('Username can only contain letters, numbers, and underscores', 'error');
+      showAlert('Error', 'Username can only contain letters, numbers, and underscores');
       return false;
     }
     
     // Email validation
     if (!email.trim()) {
-      showToast('Email is required', 'error');
+      showAlert('Error', 'Email is required');
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      showToast('Please enter a valid email address', 'error');
+      showAlert('Error', 'Please enter a valid email address');
       return false;
     }
     if (!isEmailVerified) {
-      showToast('Please verify your email address first', 'error');
+      showAlert('Error', 'Please verify your email address first');
       return false;
     }
     
     // Phone number validation
     if (!phoneNumber.trim()) {
-      showToast('Phone number is required', 'error');
+      showAlert('Error', 'Phone number is required');
       return false;
     }
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    const phoneRegex = /^07[0-9]{8}$/;
     if (!phoneRegex.test(phoneNumber.replace(/[\s\-\(\)]/g, ''))) {
-      showToast('Please enter a valid phone number', 'error');
+      showAlert('Error', 'Please enter a valid phone number (e.g., 0718247980)');
       return false;
     }
     
     // Password validation
     if (!password.trim()) {
-      showToast('Password is required', 'error');
+      showAlert('Error', 'Password is required');
       return false;
     }
     if (password.length < 6) {
-      showToast('Password must be at least 6 characters', 'error');
+      showAlert('Error', 'Password must be at least 6 characters');
       return false;
     }
     if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-      showToast('Password must contain at least one uppercase letter, one lowercase letter, and one number', 'error');
+      showAlert('Error', 'Password must contain at least one uppercase letter, one lowercase letter, and one number');
+      return false;
+    }
+    
+    // Confirm password validation
+    if (!confirmPassword.trim()) {
+      showAlert('Error', 'Please confirm your password');
+      return false;
+    }
+    if (password !== confirmPassword) {
+      showAlert('Error', 'Passwords do not match');
       return false;
     }
     
     // Address validation
     if (!formattedAddress.trim()) {
-      showToast('Address is required', 'error');
+      showAlert('Error', 'Address is required');
       return false;
     }
     if (formattedAddress.trim().length < 10) {
-      showToast('Please enter a complete address', 'error');
+      showAlert('Error', 'Please enter a complete address');
       return false;
     }
     
     // Date of birth validation
     if (!dateOfBirth.trim()) {
-      showToast('Date of birth is required', 'error');
+      showAlert('Error', 'Date of birth is required');
       return false;
     }
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(dateOfBirth.trim())) {
-      showToast('Date of birth must be in YYYY-MM-DD format', 'error');
+      showAlert('Error', 'Date of birth must be in YYYY-MM-DD format');
       return false;
     }
     const birthDate = new Date(dateOfBirth.trim());
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     if (age < 13 || age > 120) {
-      showToast('You must be between 13 and 120 years old', 'error');
+      showAlert('Error', 'You must be between 13 and 120 years old');
       return false;
     }
     
@@ -253,16 +244,16 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       const result = await AuthService.signup(signupData);
       
       if (result.success) {
-        showToast('Account created successfully! Please login.', 'success');
+        showAlert('Success', 'Account created successfully! Please login.');
         setTimeout(() => {
           onSignupSuccess();
         }, 2000);
       } else {
-        showToast(result.message || 'Signup failed', 'error');
+        showAlert('Error', result.message || 'Signup failed');
       }
     } catch (error) {
       console.error('Signup error:', error);
-      showToast('Could not connect to server', 'error');
+      showAlert('Error', 'Could not connect to server');
     } finally {
       setIsLoading(false);
     }
@@ -272,43 +263,63 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     label: string,
     field: keyof FormDataType,
     placeholder: string,
-    iconName: string,
-    keyboardType: any = 'default',
-    secureTextEntry = false
+    iconName: keyof typeof Ionicons.glyphMap,
+    keyboardType: any = 'default'
   ) => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>{label}</Text>
-      <View style={[
-        styles.inputWrapper,
-        focusedInput === field && styles.inputWrapperFocused,
-        field === 'email' && isEmailVerified && styles.inputWrapperVerified
-      ]}>
-        <Ionicons 
-          name={iconName as any} 
-          size={18} 
-          color={focusedInput === field ? "#2A7CC7" : "#94A3B8"} 
-          style={styles.inputIcon} 
-        />
+      <View style={styles.inputWrapper}>
+        <Ionicons name={iconName} size={20} color="#3B82F6" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor="#9CA3AF"
           value={formData[field]}
           onChangeText={(text) => {
             setFormData(prev => ({ ...prev, [field]: text }));
             if (field === 'email') setIsEmailVerified(false);
           }}
-          onFocus={() => setFocusedInput(field)}
-          onBlur={() => setFocusedInput(null)}
           keyboardType={keyboardType}
-          secureTextEntry={secureTextEntry}
           autoCapitalize={field === 'email' || field === 'username' ? 'none' : 'words'}
           autoCorrect={false}
-          editable={true}
-          selectTextOnFocus={true}
-          contextMenuHidden={false}
-          caretHidden={false}
         />
+      </View>
+    </View>
+  );
+
+  const renderPasswordInput = (
+    label: string,
+    field: keyof FormDataType,
+    placeholder: string,
+    isVisible: boolean,
+    toggleVisibility: () => void
+  ) => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <View style={styles.inputWrapper}>
+        <Ionicons name="lock-closed" size={20} color="#3B82F6" style={styles.inputIcon} />
+        <TextInput
+          style={styles.passwordInput}
+          placeholder={placeholder}
+          placeholderTextColor="#9CA3AF"
+          value={formData[field]}
+          onChangeText={(text) => {
+            setFormData(prev => ({ ...prev, [field]: text }));
+          }}
+          secureTextEntry={!isVisible}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <TouchableOpacity 
+          style={styles.eyeButton}
+          onPress={toggleVisibility}
+        >
+          <Ionicons 
+            name={isVisible ? 'eye-off' : 'eye'} 
+            size={20} 
+            color="#6B7280" 
+          />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -316,60 +327,42 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
   const renderEmailInput = () => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>Email</Text>
-      <View style={styles.emailInputRow}>
-        <View style={[
-          styles.emailInputWrapper,
-          focusedInput === 'email' && styles.inputWrapperFocused,
-          isEmailVerified && styles.inputWrapperVerified
-        ]}>
-          <Ionicons 
-            name="mail-outline" 
-            size={18} 
-            color={isEmailVerified ? "#059669" : focusedInput === 'email' ? "#2A7CC7" : "#94A3B8"} 
-            style={styles.inputIcon} 
-          />
+      <View style={styles.emailRow}>
+        <View style={[styles.inputWrapper, styles.emailInputWrapper, isEmailVerified && styles.inputWrapperVerified]}>
+          <Ionicons name="mail" size={20} color={isEmailVerified ? "#10B981" : "#3B82F6"} style={styles.inputIcon} />
           <TextInput
             style={styles.emailInput}
             placeholder="Enter your email address"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9CA3AF"
             value={formData.email}
             onChangeText={(text) => {
               setFormData(prev => ({ ...prev, email: text }));
               setIsEmailVerified(false);
             }}
-            onFocus={() => setFocusedInput('email')}
-            onBlur={() => setFocusedInput(null)}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
-            editable={true}
-            selectTextOnFocus={true}
-            contextMenuHidden={false}
-            caretHidden={false}
           />
         </View>
         <TouchableOpacity
-          style={[
-            styles.verifyButton,
-            isEmailVerified && styles.verifyButtonVerified,
-            isVerifyingEmail && styles.verifyButtonLoading
-          ]}
+          style={[styles.verifyButton, isEmailVerified && styles.verifyButtonVerified]}
           onPress={verifyEmail}
           disabled={isVerifyingEmail || isEmailVerified || !formData.email.trim()}
         >
           {isVerifyingEmail ? (
-            <Text style={styles.verifyButtonText}>...</Text>
+            <Ionicons name="refresh" size={18} color="#FFFFFF" />
           ) : isEmailVerified ? (
-            <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+            <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
           ) : (
             <Text style={styles.verifyButtonText}>Verify</Text>
           )}
         </TouchableOpacity>
       </View>
       {isEmailVerified && (
-        <Text style={styles.verifiedText}>
-          <Ionicons name="checkmark-circle" size={14} color="#059669" /> Email verified successfully!
-        </Text>
+        <View style={styles.verifiedContainer}>
+          <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+          <Text style={styles.verifiedText}>Email verified successfully!</Text>
+        </View>
       )}
     </View>
   );
@@ -377,48 +370,27 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
   const renderAddressInput = () => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>Address</Text>
-      <View style={styles.addressInputRow}>
-        <View style={[
-          styles.addressInputWrapper,
-          focusedInput === 'formattedAddress' && styles.inputWrapperFocused
-        ]}>
-          <Ionicons 
-            name="location-outline" 
-            size={18} 
-            color={focusedInput === 'formattedAddress' ? "#2A7CC7" : "#94A3B8"} 
-            style={styles.inputIcon} 
-          />
+      <View style={styles.addressRow}>
+        <View style={styles.inputWrapper}>
+          <Ionicons name="location" size={20} color="#3B82F6" style={styles.inputIcon} />
           <TextInput
             style={styles.addressInput}
             placeholder="Enter your address or select on map"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9CA3AF"
             value={formData.formattedAddress}
             onChangeText={(text) => {
               setFormData(prev => ({ ...prev, formattedAddress: text }));
             }}
-            onFocus={() => setFocusedInput('formattedAddress')}
-            onBlur={() => setFocusedInput(null)}
             multiline={true}
             numberOfLines={2}
             autoCorrect={false}
-            editable={true}
-            selectTextOnFocus={true}
-            contextMenuHidden={false}
-            caretHidden={false}
           />
         </View>
         <TouchableOpacity
           style={styles.mapButton}
           onPress={() => setShowLocationModal(true)}
         >
-          <LinearGradient
-            colors={['#3B95E3', '#2A7CC7']}
-            style={styles.mapButtonGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Ionicons name="map" size={22} color="#FFFFFF" />
-          </LinearGradient>
+          <Ionicons name="map" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </View>
@@ -429,123 +401,61 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Gradient Background */}
-      <LinearGradient
-        colors={['#1E6091', '#2A7CC7', '#3B95E3']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.backgroundGradient}
-      />
-      
-      {/* Custom Toast */}
-      {toast.visible && (
-        <Animated.View 
-          style={[
-            styles.toast,
-            toast.type === 'success' ? styles.toastSuccess : styles.toastError,
-            { transform: [{ translateX: slideAnim }] }
-          ]}
-        >
-          <View style={[
-            styles.toastIndicator,
-            toast.type === 'success' ? styles.indicatorSuccess : styles.indicatorError
-          ]} />
-          <Text style={styles.toastText}>
-            {toast.type === 'success' ? (
-              <Ionicons name="checkmark-circle" size={16} color="#059669" style={{marginRight: 6}} />
-            ) : (
-              <Ionicons name="alert-circle" size={16} color="#DC2626" style={{marginRight: 6}} />
-            )}
-            {toast.message}
-          </Text>
-        </Animated.View>
-      )}
-
-      {/* Header with Logo */}
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>ShopMind</Text>
-        <Text style={styles.logoTagline}>Create your account</Text>
-      </View>
-
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.card}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Join ShopMind</Text>
-            <Text style={styles.subtitle}>Fill in your details to get started</Text>
-          </View>
+        <View style={styles.header}>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Fill in your details to get started</Text>
+        </View>
 
-          <View style={styles.form}>
-            {renderInput('Full Name', 'fullName', 'Enter your full name', 'person-outline')}
-            {renderInput('Username', 'username', 'Choose a username', 'at-outline')}
-            {renderEmailInput()}
-            {renderInput('Phone Number', 'phoneNumber', '+1234567890', 'call-outline', 'phone-pad')}
-            {renderInput('Password', 'password', 'Create a secure password', 'lock-closed-outline', 'default', true)}
-            {renderAddressInput()}
-            {renderInput('Date of Birth', 'dateOfBirth', 'YYYY-MM-DD (e.g., 1990-01-15)', 'calendar-outline')}
+        <View style={styles.form}>
+          {renderInput('Full Name', 'fullName', 'Enter your full name', 'person')}
+          {renderInput('Username', 'username', 'Choose a username', 'at')}
+          {renderEmailInput()}
+          {renderInput('Phone Number', 'phoneNumber', '+1234567890', 'call', 'phone-pad')}
+          {renderPasswordInput('Password', 'password', 'Create a secure password', showPassword, () => setShowPassword(!showPassword))}
+          {renderPasswordInput('Confirm Password', 'confirmPassword', 'Confirm your password', showConfirmPassword, () => setShowConfirmPassword(!showConfirmPassword))}
+          {renderAddressInput()}
+          {renderInput('Date of Birth', 'dateOfBirth', 'YYYY-MM-DD (e.g., 1990-01-15)', 'calendar')}
+          
+          {/* Optional fields */}
+          <View style={styles.optionalSection}>
+            <Text style={styles.optionalTitle}>Optional Information</Text>
             
-            {/* Optional fields */}
-            <View style={styles.optionalSection}>
-              <View style={styles.optionalHeader}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.optionalTitle}>Optional Information</Text>
-                <View style={styles.dividerLine} />
+            <ImagePickerComponent 
+              onImageUpload={handleImageUpload}
+              currentImageUrl={formData.profileImageUrl}
+              label="Profile Image"
+            />
+            
+            <View style={styles.locationFields}>
+              <View style={styles.halfWidth}>
+                {renderInput('Latitude', 'latitude', 'Auto-filled from map', 'navigate')}
               </View>
-              
-              <ImagePickerComponent 
-                onImageUpload={handleImageUpload}
-                currentImageUrl={formData.profileImageUrl}
-                label="Profile Image"
-              />
-              
-              <View style={styles.locationFields}>
-                <View style={styles.halfWidth}>
-                  {renderInput('Latitude', 'latitude', 'Auto-filled from map', 'navigate-outline', 'numeric')}
-                </View>
-                <View style={styles.halfWidth}>
-                  {renderInput('Longitude', 'longitude', 'Auto-filled from map', 'navigate-circle-outline', 'numeric')}
-                </View>
+              <View style={styles.halfWidth}>
+                {renderInput('Longitude', 'longitude', 'Auto-filled from map', 'navigate')}
               </View>
             </View>
-
-            <TouchableOpacity 
-              style={[styles.signupButton, (isLoading || !isEmailVerified) && styles.buttonDisabled]} 
-              onPress={handleSignup}
-              disabled={isLoading || !isEmailVerified}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#2A7CC7', '#1E6091']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.buttonGradient}
-              >
-                <Text style={styles.signupButtonText}>
-                  {isLoading ? (
-                    <>
-                      <Ionicons name="refresh" size={18} color="#FFFFFF" style={{marginRight: 8}} />
-                      Creating Account...
-                    </>
-                  ) : (
-                    <>
-                      <Ionicons name="person-add" size={18} color="#FFFFFF" style={{marginRight: 8}} />
-                      Create Account
-                    </>
-                  )}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.backToLogin} onPress={onBackToLogin} activeOpacity={0.7}>
-              <Text style={styles.backToLoginText}>
-                <Ionicons name="arrow-back" size={16} color="#FFFFFF" style={{marginRight: 4}} />
-                Already have an account? <Text style={styles.loginLink}>Sign In</Text>
-              </Text>
-            </TouchableOpacity>
           </View>
+
+          <TouchableOpacity 
+            style={[styles.signupButton, (isLoading || !isEmailVerified) && styles.buttonDisabled]} 
+            onPress={handleSignup}
+            disabled={isLoading || !isEmailVerified}
+          >
+            <Text style={styles.signupButtonText}>
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.backToLogin} onPress={onBackToLogin}>
+            <Text style={styles.backToLoginText}>
+              Already have an account? <Text style={styles.loginLink}>Sign In</Text>
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -564,59 +474,23 @@ export default SignupScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  logoContainer: {
-    paddingTop: 50,
-    paddingBottom: 10,
-    alignItems: 'center',
-  },
-  logoText: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  logoTagline: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginTop: 4,
+    backgroundColor: '#F8FAFC',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 10,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-  },
-  card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 5,
+    padding: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 40,
+    marginTop: 60,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
-    color: '#1E6091',
+    color: '#1E293B',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
@@ -626,158 +500,157 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   form: {
-    gap: 18,
+    gap: 20,
   },
   inputContainer: {
-    gap: 6,
+    marginBottom: 4,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E6091',
+    color: '#374151',
+    marginBottom: 8,
     marginLeft: 4,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  inputWrapperFocused: {
-    borderColor: '#2A7CC7',
-    shadowColor: '#2A7CC7',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   inputWrapperVerified: {
-    borderColor: '#059669',
+    borderColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOpacity: 0.1,
   },
   inputIcon: {
-    marginLeft: 16,
     marginRight: 12,
   },
   input: {
     flex: 1,
     height: 52,
-    paddingHorizontal: 12,
     fontSize: 16,
     color: '#1F2937',
-    fontWeight: '500',
-    textAlignVertical: 'center',
-    paddingTop: 0,
-    paddingBottom: 0,
+    fontWeight: '400',
   },
-  emailInputRow: {
+  emailRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     alignItems: 'center',
   },
   emailInputWrapper: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   emailInput: {
     flex: 1,
     height: 52,
-    paddingHorizontal: 12,
     fontSize: 16,
     color: '#1F2937',
-    fontWeight: '500',
-    textAlignVertical: 'center',
-    paddingTop: 0,
-    paddingBottom: 0,
+    fontWeight: '400',
   },
   verifyButton: {
     height: 52,
-    paddingHorizontal: 16,
-    backgroundColor: '#16A34A',
+    paddingHorizontal: 20,
+    backgroundColor: '#3B82F6',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    minWidth: 80,
+    minWidth: 90,
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   verifyButtonVerified: {
-    backgroundColor: '#059669',
-  },
-  verifyButtonLoading: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: '#10B981',
+    shadowColor: '#10B981',
   },
   verifyButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
-  },
-  verifiedText: {
-    color: '#059669',
-    fontSize: 12,
     fontWeight: '600',
-    marginTop: 4,
+  },
+  verifiedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
     marginLeft: 4,
   },
-  addressInputRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
+  verifiedText: {
+    color: '#10B981',
+    fontSize: 13,
+    fontWeight: '500',
+    marginLeft: 6,
   },
-  addressInputWrapper: {
+  passwordInput: {
     flex: 1,
+    height: 52,
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '400',
+  },
+  eyeButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addressRow: {
     flexDirection: 'row',
+    gap: 12,
     alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   addressInput: {
     flex: 1,
     minHeight: 52,
-    paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     color: '#1F2937',
-    fontWeight: '500',
+    fontWeight: '400',
     textAlignVertical: 'top',
   },
   mapButton: {
     height: 52,
     width: 52,
+    backgroundColor: '#3B82F6',
     borderRadius: 12,
-    overflow: 'hidden',
-  },
-  mapButtonGradient: {
-    width: '100%',
-    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   optionalSection: {
-    marginTop: 16,
-    paddingTop: 16,
-  },
-  optionalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
+    marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
   optionalTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: '#64748B',
-    paddingHorizontal: 10,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E2E8F0',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   locationFields: {
     flexDirection: 'row',
@@ -788,87 +661,43 @@ const styles = StyleSheet.create({
   },
   signupButton: {
     height: 56,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 16,
-  },
-  buttonGradient: {
-    width: '100%',
-    height: '100%',
+    backgroundColor: '#3B82F6',
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  signupButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  backToLogin: {
-    padding: 14,
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  backToLoginText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  loginLink: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    textDecorationLine: 'underline',
-  },
-  toast: {
-    position: 'absolute',
-    top: 60,
-    right: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 12,
-    padding: 16,
-    minWidth: 280,
-    maxWidth: width * 0.9,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000000',
+    marginTop: 32,
+    shadowColor: '#3B82F6',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 5,
-    borderWidth: 1,
-    zIndex: 1000,
   },
-  toastSuccess: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#16A34A',
+  buttonDisabled: {
+    backgroundColor: '#9CA3AF',
+    shadowColor: '#9CA3AF',
+    shadowOpacity: 0.1,
   },
-  toastError: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#EF4444',
+  signupButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
-  toastIndicator: {
-    width: 4,
-    height: '100%',
-    borderRadius: 2,
-    marginRight: 12,
+  backToLogin: {
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 16,
   },
-  indicatorSuccess: {
-    backgroundColor: '#16A34A',
-  },
-  indicatorError: {
-    backgroundColor: '#EF4444',
-  },
-  toastText: {
-    color: '#0F172A',
+  backToLoginText: {
+    color: '#64748B',
     fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
-    lineHeight: 20,
+    fontWeight: '400',
+  },
+  loginLink: {
+    color: '#3B82F6',
+    fontWeight: '600',
   },
 });
