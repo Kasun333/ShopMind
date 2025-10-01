@@ -5,6 +5,7 @@ import { User } from '../types/User';
 import DriverDashboard from '../screens/driver/DriverDashboard';
 import DeliveryManagement from '../screens/driver/DeliveryManagement';
 import TruckMaintenance from '../screens/driver/TruckMaintenance';
+import VehicleScreen from '../screens/driver/VehicleScreen';
 
 interface DriverNavigationProps {
   user: User;
@@ -12,7 +13,7 @@ interface DriverNavigationProps {
   onLogout: () => void;
 }
 
-type DriverScreen = 'home' | 'orders' | 'notifications';
+type DriverScreen = 'home' | 'orders' | 'notifications' | 'vehicle';
 
 const DriverNavigation: React.FC<DriverNavigationProps> = ({ user, token, onLogout }) => {
   const [currentScreen, setCurrentScreen] = useState<DriverScreen>('home');
@@ -43,6 +44,13 @@ const DriverNavigation: React.FC<DriverNavigationProps> = ({ user, token, onLogo
             user={user}
             token={token}
             onBack={() => setCurrentScreen('home')}
+          />
+        );
+      case 'vehicle':
+        return (
+          <VehicleScreen
+            user={user}
+            token={token}
           />
         );
       default:
@@ -105,6 +113,16 @@ const DriverNavigation: React.FC<DriverNavigationProps> = ({ user, token, onLogo
           {getTabIcon('notifications', 'notifications-outline')}
           <View style={styles.tabLabel}>
             <View style={[styles.tabDot, currentScreen === 'notifications' && styles.activeTabDot]} />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, currentScreen === 'vehicle' && styles.activeTab]}
+          onPress={() => setCurrentScreen('vehicle')}
+        >
+          {getTabIcon('vehicle', 'car-outline')}
+          <View style={styles.tabLabel}>
+            <View style={[styles.tabDot, currentScreen === 'vehicle' && styles.activeTabDot]} />
           </View>
         </TouchableOpacity>
       </View>

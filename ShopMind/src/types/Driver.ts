@@ -117,6 +117,52 @@ export interface DriverApiResponse {
   error: null;
 }
 
+export interface DriverAssignment {
+  assignmentId: number;
+  driverId: number;
+  vehicleId: number;
+  status: string;
+  assignedBy: number;
+  assignedAt: string;
+  unassignedAt: string | null;
+  unassignedBy: number | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DriverAssignmentResponse {
+  success: boolean;
+  message: string;
+  data: DriverAssignment[];
+  timestamp: string;
+  error: null;
+}
+
+export interface VehicleDetails {
+  vehicleId: number;
+  vehicleNumber: string;
+  vehicleType: string;
+  capacity: number;
+  status: string;
+  assignedDriverId: number | null;
+  make: string;
+  model: string;
+  year: number;
+  lastMaintenance: string;
+  nextMaintenance: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VehicleApiResponse {
+  success: boolean;
+  message: string;
+  data: VehicleDetails;
+  timestamp: string;
+  error: null;
+}
+
 export interface DriverProfile {
   id: string;
   fullName: string;
