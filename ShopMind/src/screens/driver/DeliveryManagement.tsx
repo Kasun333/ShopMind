@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import * as React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,15 +15,18 @@ import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { DeliveryOrder, RouteInfo } from '../../types/Driver';
+import { User } from '../../types/User';
 import { GOOGLE_MAPS_API_KEY } from '@env';
 
 const { width, height } = Dimensions.get('window');
 
 interface DeliveryManagementProps {
+  user: User;
+  token: string;
   onBack: () => void;
 }
 
-const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
+const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, onBack }) => {
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<DeliveryOrder | null>(null);
@@ -112,85 +116,17 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
     };
   };
 
-  const loadDeliveryData = () => {
-    // Hardcoded delivery data
-    const mockOrders: DeliveryOrder[] = [
-      {
-        id: 'DEL001',
-        customerName: 'John Smith',
-        customerAddress: '123 Main St, Colombo 03',
-        customerPhone: '+94771234567',
-        items: [
-          { id: '1', name: 'Samsung Galaxy S23', quantity: 1, price: 250000 },
-          { id: '2', name: 'Phone Case', quantity: 1, price: 5000 }
-        ],
-        totalAmount: 255000,
-        estimatedDeliveryTime: '10:30 AM',
-        distance: 500,
-        coordinates: { latitude: 6.9271, longitude: 79.8612 },
-        status: 'pending'
-      },
-      {
-        id: 'DEL002',
-        customerName: 'Sarah Johnson',
-        customerAddress: '456 Galle Road, Colombo 06',
-        customerPhone: '+94771234568',
-        items: [
-          { id: '3', name: 'iPhone 15 Pro', quantity: 1, price: 380000 }
-        ],
-        totalAmount: 380000,
-        estimatedDeliveryTime: '11:45 AM',
-        distance: 1200,
-        coordinates: { latitude: 6.8851, longitude: 79.8579 },
-        status: 'pending'
-      },
-      {
-        id: 'DEL003',
-        customerName: 'Mike Wilson',
-        customerAddress: '789 Kandy Road, Colombo 07',
-        customerPhone: '+94771234569',
-        items: [
-          { id: '4', name: 'MacBook Pro', quantity: 1, price: 450000 },
-          { id: '5', name: 'Magic Mouse', quantity: 1, price: 25000 }
-        ],
-        totalAmount: 475000,
-        estimatedDeliveryTime: '2:15 PM',
-        distance: 800,
-        coordinates: { latitude: 6.9172, longitude: 79.8648 },
-        status: 'pending'
-      },
-      {
-        id: 'DEL004',
-        customerName: 'Emma Davis',
-        customerAddress: '321 Negombo Road, Colombo 13',
-        customerPhone: '+94771234570',
-        items: [
-          { id: '6', name: 'Sony Headphones', quantity: 1, price: 85000 }
-        ],
-        totalAmount: 85000,
-        estimatedDeliveryTime: '3:30 PM',
-        distance: 1500,
-        coordinates: { latitude: 6.9750, longitude: 79.9250 },
-        status: 'pending'
-      }
-    ];
-
-    setOrders(mockOrders);
-
-    // Create route info
-    const totalDistance = mockOrders.reduce((sum, order) => sum + order.distance, 0);
-    const routeCoordinates = mockOrders.map(order => ({
-      latitude: order.coordinates.latitude,
-      longitude: order.coordinates.longitude,
-      orderId: order.id
-    }));
-
+  const loadDeliveryData = async () => {
+    // TODO: Implement API call to fetch driver orders
+    // For now, set empty orders
+    setOrders([]);
+    
     const route: RouteInfo = {
-      totalDistance,
-      estimatedTime: Math.ceil(totalDistance / 1000 * 3 + mockOrders.length * 15), // 3 min per km + 15 min per stop
+      totalDistance: 0,
+      estimatedTime: 0,
       currentOrderIndex: 0,
-      orders: mockOrders,
-      optimizedRoute: routeCoordinates
+      orders: [],
+      optimizedRoute: []
     };
 
     setRouteInfo(route);
@@ -302,6 +238,21 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
     }
   };
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+        return '#EF4444';
+      case 'high':
+        return '#F59E0B';
+      case 'medium':
+        return '#3B82F6';
+      case 'low':
+        return '#6B7280';
+      default:
+        return '#6B7280';
+    }
+  };
+
   const getNextDeliveryDistance = () => {
     const nextOrder = orders.find(order => order.status === 'pending');
     return nextOrder ? nextOrder.distance : 0;
@@ -327,7 +278,7 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Delivery Route</Text>
+          <Text style={styles.headerTitle}>Orders & Tasks</Text>
           <TouchableOpacity style={styles.menuButton}>
             <Ionicons name="menu" size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -454,7 +405,7 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
 
       {/* Orders List */}
       <View style={styles.ordersContainer}>
-        <Text style={styles.ordersTitle}>Today's Deliveries ({orders.length})</Text>
+        <Text style={styles.ordersTitle}>Assigned Orders ({orders.length})</Text>
         
         <ScrollView 
           horizontal 
@@ -475,14 +426,30 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
             >
               <View style={styles.orderHeader}>
                 <Text style={styles.orderNumber}>#{order.id.slice(-2)}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
-                  <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
+                <View style={styles.orderHeaderRight}>
+                  {order.priority && order.priority !== 'low' && (
+                    <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(order.priority) }]}>
+                      <Text style={styles.priorityText}>{order.priority.toUpperCase()}</Text>
+                    </View>
+                  )}
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
+                    <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
+                  </View>
                 </View>
               </View>
               
               <Text style={styles.orderCustomer} numberOfLines={1}>{order.customerName}</Text>
               <Text style={styles.orderDistance}>{order.distance}m away</Text>
               <Text style={styles.orderTime}>{order.estimatedDeliveryTime}</Text>
+              
+              {order.specialInstructions && (
+                <View style={styles.specialInstructionsContainer}>
+                  <Ionicons name="information-circle" size={14} color="#F59E0B" />
+                  <Text style={styles.specialInstructions} numberOfLines={2}>
+                    {order.specialInstructions}
+                  </Text>
+                </View>
+              )}
               
               {order.status === 'pending' && (
                 <TouchableOpacity 
@@ -504,6 +471,14 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        
+        {orders.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons name="list-outline" size={64} color="#D1D5DB" />
+            <Text style={styles.emptyTitle}>No Orders Assigned</Text>
+            <Text style={styles.emptyMessage}>You don't have any delivery orders at the moment. Check back later for new assignments.</Text>
+          </View>
+        )}
       </View>
 
       {/* Order Details Modal */}
@@ -569,7 +544,41 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
                       <Ionicons name="checkmark-circle" size={16} color={getStatusColor(selectedOrder.status)} />
                       <Text style={styles.infoText}>{getStatusText(selectedOrder.status)}</Text>
                     </View>
+                    {selectedOrder.sequence && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="list" size={16} color="#6B7280" />
+                        <Text style={styles.infoText}>Sequence: #{selectedOrder.sequence}</Text>
+                      </View>
+                    )}
+                    {selectedOrder.priority && selectedOrder.priority !== 'low' && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="flag" size={16} color={getPriorityColor(selectedOrder.priority)} />
+                        <Text style={[styles.infoText, { color: getPriorityColor(selectedOrder.priority) }]}>
+                          Priority: {selectedOrder.priority.toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
                   </View>
+
+                  {selectedOrder.specialInstructions && (
+                    <View style={styles.specialInstructionsSection}>
+                      <Text style={styles.modalSectionTitle}>Special Instructions</Text>
+                      <View style={styles.instructionsContainer}>
+                        <Ionicons name="information-circle" size={20} color="#F59E0B" />
+                        <Text style={styles.instructionsText}>{selectedOrder.specialInstructions}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {selectedOrder.managerNotes && (
+                    <View style={styles.managerNotesSection}>
+                      <Text style={styles.modalSectionTitle}>Manager Notes</Text>
+                      <View style={styles.notesContainer}>
+                        <Ionicons name="document-text" size={20} color="#3B82F6" />
+                        <Text style={styles.notesText}>{selectedOrder.managerNotes}</Text>
+                      </View>
+                    </View>
+                  )}
                 </ScrollView>
 
                 <View style={styles.modalActions}>
@@ -740,6 +749,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  orderHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  priorityBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  priorityText: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  specialInstructionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 8,
+    marginBottom: 8,
+    backgroundColor: '#FEF3C7',
+    padding: 8,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  specialInstructions: {
+    fontSize: 12,
+    color: '#92400E',
+    marginLeft: 6,
+    flex: 1,
+    fontStyle: 'italic',
   },
   orderNumber: {
     fontSize: 16,
@@ -943,6 +985,67 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  specialInstructionsSection: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  instructionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: '#92400E',
+    marginLeft: 8,
+    flex: 1,
+    fontStyle: 'italic',
+  },
+  managerNotesSection: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  notesContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EBF4FF',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3B82F6',
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#1E40AF',
+    marginLeft: 8,
+    flex: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 64,
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyMessage: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

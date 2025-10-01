@@ -1,7 +1,7 @@
 // API Configuration
 // Change the IP address here when connecting to a different network
 export const API_CONFIG = {
-  BASE_IP: '192.168.1.100', // Change this IP when network changes
+  BASE_IP: '192.168.1.101', // Change this IP when network changes
   
   // Service endpoints
   AUTH_SERVICE: {
@@ -29,6 +29,10 @@ export const API_CONFIG = {
     PORT: '8085',
     BASE_URL: '',
   },
+  DRIVER_SERVICE: {
+    PORT: '8090',
+    BASE_URL: '',
+  },
 };
 
 // Auto-generate full URLs
@@ -39,6 +43,7 @@ API_CONFIG.ECOMMERCE_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONF
 API_CONFIG.NOTIFICATION_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}`;
 API_CONFIG.NOTIFICATION_SERVICE.WS_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}/ws`;
 API_CONFIG.STOCK_ALERTS_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.STOCK_ALERTS_SERVICE.PORT}`;
+API_CONFIG.DRIVER_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.DRIVER_SERVICE.PORT}`;
 
 // External APIs (these don't change with network)
 export const EXTERNAL_APIS = {
@@ -54,6 +59,7 @@ export const ECOMMERCE_API_URL = API_CONFIG.ECOMMERCE_SERVICE.BASE_URL;
 export const NOTIFICATION_API_URL = API_CONFIG.NOTIFICATION_SERVICE.BASE_URL;
 export const WEBSOCKET_URL = API_CONFIG.NOTIFICATION_SERVICE.WS_URL;
 export const STOCK_ALERTS_API_URL = API_CONFIG.STOCK_ALERTS_SERVICE.BASE_URL;
+export const DRIVER_API_URL = API_CONFIG.DRIVER_SERVICE.BASE_URL;
 
 // Revenue API endpoints
 export const REVENUE_API_URL = API_CONFIG.ORDER_SERVICE.BASE_URL;

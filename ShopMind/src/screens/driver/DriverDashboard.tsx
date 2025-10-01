@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,102 +8,79 @@ import {
   ScrollView,
   Dimensions,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../../types/User';
-import { DeliveryOrder, TruckInfo } from '../../types/Driver';
+import { DeliveryOrder, TruckInfo, DriverProfile } from '../../types/Driver';
+import { driverService } from '../../services/driverService';
 
 const { width } = Dimensions.get('window');
+
+type DriverStatus = 'available' | 'on_delivery' | 'off_duty';
 
 interface DriverDashboardProps {
   user: User;
   token: string;
-  onNavigateToDeliveries: () => void;
-  onNavigateToMaintenance: () => void;
+  onNavigateToOrders: () => void;
+  onNavigateToNotifications: () => void;
   onLogout: () => void;
 }
 
 const DriverDashboard: React.FC<DriverDashboardProps> = ({
   user,
   token,
-  onNavigateToDeliveries,
-  onNavigateToMaintenance,
+  onNavigateToOrders,
+  onNavigateToNotifications,
   onLogout,
 }) => {
   const [todayDeliveries, setTodayDeliveries] = useState<DeliveryOrder[]>([]);
   const [truckInfo, setTruckInfo] = useState<TruckInfo | null>(null);
-  const [currentStatus, setCurrentStatus] = useState<'available' | 'on_delivery' | 'off_duty'>('available');
+  const [driverProfile, setDriverProfile] = useState<DriverProfile | null>(null);
+  const [currentStatus, setCurrentStatus] = useState<DriverStatus>('available');
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     loadDriverData();
   }, []);
 
-  const loadDriverData = () => {
-    // Hardcoded data for demo
-    const mockDeliveries: DeliveryOrder[] = [
-      {
-        id: 'DEL001',
-        customerName: 'John Smith',
-        customerAddress: '123 Main St, Colombo 03',
-        customerPhone: '+94771234567',
-        items: [
-          { id: '1', name: 'Samsung Galaxy S23', quantity: 1, price: 250000 },
-          { id: '2', name: 'Phone Case', quantity: 1, price: 5000 }
-        ],
-        totalAmount: 255000,
-        estimatedDeliveryTime: '10:30 AM',
-        distance: 500,
-        coordinates: { latitude: 6.9271, longitude: 79.8612 },
-        status: 'pending'
-      },
-      {
-        id: 'DEL002',
-        customerName: 'Sarah Johnson',
-        customerAddress: '456 Galle Road, Colombo 06',
-        customerPhone: '+94771234568',
-        items: [
-          { id: '3', name: 'iPhone 15 Pro', quantity: 1, price: 380000 }
-        ],
-        totalAmount: 380000,
-        estimatedDeliveryTime: '11:45 AM',
-        distance: 1200,
-        coordinates: { latitude: 6.8851, longitude: 79.8579 },
-        status: 'pending'
-      },
-      {
-        id: 'DEL003',
-        customerName: 'Mike Wilson',
-        customerAddress: '789 Kandy Road, Colombo 07',
-        customerPhone: '+94771234569',
-        items: [
-          { id: '4', name: 'MacBook Pro', quantity: 1, price: 450000 },
-          { id: '5', name: 'Magic Mouse', quantity: 1, price: 25000 }
-        ],
-        totalAmount: 475000,
-        estimatedDeliveryTime: '2:15 PM',
-        distance: 800,
-        coordinates: { latitude: 6.9172, longitude: 79.8648 },
-        status: 'pending'
+  const loadDriverData = async () => {
+    try {
+      // Fetch driver details from API
+      const driverResponse = await driverService.getDriverByUserId(parseInt(user.id), token);
+      if (driverResponse.success) {
+        
+        // Create driver profile using only API data and user data
+        const mergedDriverProfile: DriverProfile = {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phoneNumber || '',
+          licenseNumber: driverResponse.data.licenseNumber,
+          licenseExpiry: driverResponse.data.licenseExpiry,
+          emergencyContact: '', // Not available in API
+          emergencyPhone: driverResponse.data.emergencyContact,
+          address: '', // Not available in API
+          joinDate: driverResponse.data.createdAt,
+          totalDeliveries: 0, // Not available in API
+          rating: 0, // Not available in API
+          status: driverResponse.data.availabilityStatus.toLowerCase() as DriverStatus,
+          currentLocation: undefined, // Not available in API
+          lastLocationUpdate: undefined // Not available in API
+        };
+        setDriverProfile(mergedDriverProfile);
+        setCurrentStatus(driverResponse.data.availabilityStatus.toLowerCase() as DriverStatus);
+      } else {
+        console.error('Failed to fetch driver data:', driverResponse.message);
       }
-    ];
-
-    const mockTruck: TruckInfo = {
-      id: 'TRK001',
-      licensePlate: 'CAB-1234',
-      model: 'Isuzu D-Max',
-      year: 2020,
-      mileage: 45000,
-      lastMaintenanceDate: '2024-07-15',
-      nextMaintenanceDate: '2024-08-30',
-      maintenanceStatus: 'due_soon',
-      fuelLevel: 75,
-      engineHours: 2100
-    };
-
-    setTodayDeliveries(mockDeliveries);
-    setTruckInfo(mockTruck);
+    } catch (error) {
+      console.error('Error loading driver data:', error);
+      // Don't set any mock data - leave profile empty
+      setDriverProfile(null);
+    }
   };
+
 
   const getStatusColor = () => {
     switch (currentStatus) {
@@ -171,7 +149,10 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
             <Text style={styles.greeting}>Good morning</Text>
             <Text style={styles.driverName}>{user.fullName}</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
+          <TouchableOpacity 
+            style={styles.profileButton}
+            onPress={() => setShowProfileModal(true)}
+          >
             <Ionicons name="person-circle-outline" size={32} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -218,97 +199,114 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
         </View>
 
         {/* Next Delivery */}
-        {todayDeliveries.length > 0 && (
-          <View style={styles.nextDeliveryCard}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="navigate-circle" size={24} color="#3B82F6" />
-              <Text style={styles.cardTitle}>Next Delivery</Text>
-            </View>
-            
-            <View style={styles.deliveryInfo}>
-              <Text style={styles.customerName}>{todayDeliveries[0].customerName}</Text>
-              <Text style={styles.customerAddress}>{todayDeliveries[0].customerAddress}</Text>
-              
-              <View style={styles.deliveryMeta}>
-                <View style={styles.metaItem}>
-                  <Ionicons name="location" size={16} color="#6B7280" />
-                  <Text style={styles.metaText}>{todayDeliveries[0].distance}m away</Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <Ionicons name="time" size={16} color="#6B7280" />
-                  <Text style={styles.metaText}>{todayDeliveries[0].estimatedDeliveryTime}</Text>
-                </View>
-              </View>
-              
-              <TouchableOpacity style={styles.startDeliveryButton} onPress={onNavigateToDeliveries}>
-                <Ionicons name="play-circle" size={20} color="#FFFFFF" />
-                <Text style={styles.startDeliveryText}>Start Delivery Route</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.nextDeliveryCard}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="navigate-circle" size={24} color="#3B82F6" />
+            <Text style={styles.cardTitle}>Next Delivery</Text>
           </View>
-        )}
+          
+          <View style={styles.deliveryInfo}>
+            {todayDeliveries.length > 0 ? (
+              <>
+                <Text style={styles.customerName}>{todayDeliveries[0].customerName}</Text>
+                <Text style={styles.customerAddress}>{todayDeliveries[0].customerAddress}</Text>
+                
+                <View style={styles.deliveryMeta}>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="location" size={16} color="#6B7280" />
+                    <Text style={styles.metaText}>{todayDeliveries[0].distance}m away</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="time" size={16} color="#6B7280" />
+                    <Text style={styles.metaText}>{todayDeliveries[0].estimatedDeliveryTime}</Text>
+                  </View>
+                </View>
+                
+                <TouchableOpacity style={styles.startDeliveryButton} onPress={onNavigateToOrders}>
+                  <Ionicons name="play-circle" size={20} color="#FFFFFF" />
+                  <Text style={styles.startDeliveryText}>Start Delivery Route</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="checkmark-circle" size={48} color="#10B981" />
+                <Text style={styles.emptyStateText}>No deliveries assigned</Text>
+                <Text style={styles.emptyStateSubtext}>Check back later for new orders</Text>
+              </View>
+            )}
+          </View>
+        </View>
 
         {/* Truck Status */}
-        {truckInfo && (
-          <View style={styles.truckCard}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="car-sport" size={24} color="#8B5CF6" />
-              <Text style={styles.cardTitle}>Truck Status - {truckInfo.licensePlate}</Text>
-            </View>
-            
-            <View style={styles.truckInfo}>
-              <View style={styles.truckRow}>
-                <View style={styles.truckStat}>
-                  <Ionicons name="speedometer" size={20} color="#6B7280" />
-                  <Text style={styles.truckStatLabel}>Fuel</Text>
-                  <Text style={styles.truckStatValue}>{truckInfo.fuelLevel}%</Text>
-                </View>
-                
-                <View style={styles.truckStat}>
-                  <Ionicons name="build" size={20} color={getMaintenanceStatusColor()} />
-                  <Text style={styles.truckStatLabel}>Maintenance</Text>
-                  <Text style={[styles.truckStatValue, { color: getMaintenanceStatusColor() }]}>
-                    {getMaintenanceStatusText()}
-                  </Text>
-                </View>
-                
-                <View style={styles.truckStat}>
-                  <Ionicons name="analytics" size={20} color="#6B7280" />
-                  <Text style={styles.truckStatLabel}>Mileage</Text>
-                  <Text style={styles.truckStatValue}>{truckInfo.mileage.toLocaleString()}km</Text>
-                </View>
-              </View>
-              
-              <TouchableOpacity style={styles.maintenanceButton} onPress={onNavigateToMaintenance}>
-                <Ionicons name="construct" size={20} color="#FFFFFF" />
-                <Text style={styles.maintenanceButtonText}>Truck Maintenance</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.truckCard}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="car-sport" size={24} color="#8B5CF6" />
+            <Text style={styles.cardTitle}>Truck Status</Text>
           </View>
-        )}
+          
+          <View style={styles.truckInfo}>
+            {truckInfo ? (
+              <>
+                <Text style={styles.truckPlate}>{truckInfo.licensePlate}</Text>
+                <View style={styles.truckRow}>
+                  <View style={styles.truckStat}>
+                    <Ionicons name="speedometer" size={20} color="#6B7280" />
+                    <Text style={styles.truckStatLabel}>Fuel</Text>
+                    <Text style={styles.truckStatValue}>{truckInfo.fuelLevel}%</Text>
+                  </View>
+                  
+                  <View style={styles.truckStat}>
+                    <Ionicons name="build" size={20} color={getMaintenanceStatusColor()} />
+                    <Text style={styles.truckStatLabel}>Maintenance</Text>
+                    <Text style={[styles.truckStatValue, { color: getMaintenanceStatusColor() }]}>
+                      {getMaintenanceStatusText()}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.truckStat}>
+                    <Ionicons name="analytics" size={20} color="#6B7280" />
+                    <Text style={styles.truckStatLabel}>Mileage</Text>
+                    <Text style={styles.truckStatValue}>{truckInfo.mileage.toLocaleString()}km</Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="car-outline" size={48} color="#6B7280" />
+                <Text style={styles.emptyStateText}>No truck assigned</Text>
+                <Text style={styles.emptyStateSubtext}>Contact manager for truck assignment</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity style={styles.maintenanceButton} onPress={onNavigateToNotifications}>
+              <Ionicons name="construct" size={20} color="#FFFFFF" />
+              <Text style={styles.maintenanceButtonText}>View Notifications</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Quick Actions */}
         <View style={styles.actionsContainer}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           
-          <TouchableOpacity style={styles.actionButton} onPress={onNavigateToDeliveries}>
+          <TouchableOpacity style={styles.actionButton} onPress={onNavigateToOrders}>
             <LinearGradient
               colors={['#3B82F6', '#1D4ED8']}
               style={styles.actionButtonGradient}
             >
-              <Ionicons name="map" size={24} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>View All Deliveries</Text>
+              <Ionicons name="list" size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>View All Orders</Text>
               <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.actionButton} onPress={onNavigateToMaintenance}>
+          <TouchableOpacity style={styles.actionButton} onPress={onNavigateToNotifications}>
             <LinearGradient
               colors={['#8B5CF6', '#7C3AED']}
               style={styles.actionButtonGradient}
             >
-              <Ionicons name="build" size={24} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Truck Maintenance</Text>
+              <Ionicons name="notifications" size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>Notifications</Text>
               <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
@@ -318,6 +316,126 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Profile Modal */}
+      <Modal
+        visible={showProfileModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.profileModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Driver Profile</Text>
+              <TouchableOpacity onPress={() => setShowProfileModal(false)}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {driverProfile && (
+                <>
+                  {/* Profile Header */}
+                  <View style={styles.profileHeader}>
+                    <View style={styles.avatarContainer}>
+                      <Ionicons name="person" size={40} color="#3B82F6" />
+                    </View>
+                    <Text style={styles.profileName}>{driverProfile.fullName}</Text>
+                    <Text style={styles.profileEmail}>{driverProfile.email}</Text>
+                    <View style={styles.ratingContainer}>
+                      <Ionicons name="star" size={16} color="#F59E0B" />
+                      <Text style={styles.ratingText}>{driverProfile.rating}</Text>
+                      <Text style={styles.deliveriesCount}>({driverProfile.totalDeliveries} deliveries)</Text>
+                    </View>
+                  </View>
+
+                  {/* Personal Information */}
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Personal Information</Text>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="call" size={20} color="#6B7280" />
+                      <Text style={styles.infoLabel}>Phone:</Text>
+                      <Text style={styles.infoValue}>{driverProfile.phone || 'Not provided'}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="location" size={20} color="#6B7280" />
+                      <Text style={styles.infoLabel}>Address:</Text>
+                      <Text style={styles.infoValue}>{driverProfile.address || 'Not provided'}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="calendar" size={20} color="#6B7280" />
+                      <Text style={styles.infoLabel}>Join Date:</Text>
+                      <Text style={styles.infoValue}>{new Date(driverProfile.joinDate).toLocaleDateString()}</Text>
+                    </View>
+                  </View>
+
+                  {/* License Information */}
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>License Information</Text>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="card" size={20} color="#6B7280" />
+                      <Text style={styles.infoLabel}>License #:</Text>
+                      <Text style={styles.infoValue}>{driverProfile.licenseNumber}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="time" size={20} color="#6B7280" />
+                      <Text style={styles.infoLabel}>Expiry:</Text>
+                      <Text style={styles.infoValue}>{new Date(driverProfile.licenseExpiry).toLocaleDateString()}</Text>
+                    </View>
+                  </View>
+
+                  {/* Emergency Contact */}
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Emergency Contact</Text>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="person-add" size={20} color="#6B7280" />
+                      <Text style={styles.infoLabel}>Contact:</Text>
+                      <Text style={styles.infoValue}>{driverProfile.emergencyContact || 'Not provided'}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="call" size={20} color="#6B7280" />
+                      <Text style={styles.infoLabel}>Phone:</Text>
+                      <Text style={styles.infoValue}>{driverProfile.emergencyPhone}</Text>
+                    </View>
+                  </View>
+
+                  {/* Current Status */}
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Current Status</Text>
+                    <View style={styles.statusRow}>
+                      <View style={[styles.statusIndicator, { backgroundColor: getStatusColor() }]} />
+                      <Text style={styles.statusLabel}>Status:</Text>
+                      <Text style={styles.statusValue}>{getStatusText()}</Text>
+                    </View>
+                    {driverProfile.currentLocation && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="navigate" size={20} color="#6B7280" />
+                        <Text style={styles.infoLabel}>Location:</Text>
+                        <Text style={styles.infoValue}>
+                          {driverProfile.currentLocation.latitude.toFixed(4)}, {driverProfile.currentLocation.longitude.toFixed(4)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={() => {
+                  // TODO: Implement edit profile functionality
+                  setShowProfileModal(false);
+                }}
+              >
+                <Text style={styles.editButtonText}>Edit Profile</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -534,12 +652,6 @@ const styles = StyleSheet.create({
   actionsContainer: {
     marginBottom: 24,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 16,
-  },
   actionButton: {
     marginBottom: 12,
     borderRadius: 16,
@@ -579,6 +691,167 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Profile Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  profileModal: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  modalBody: {
+    paddingHorizontal: 20,
+  },
+  profileHeader: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#EBF4FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  profileName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginBottom: 12,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginLeft: 4,
+  },
+  deliveriesCount: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 8,
+  },
+  section: {
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    width: 80,
+    marginLeft: 12,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    flex: 1,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  statusLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    width: 80,
+  },
+  statusValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    flex: 1,
+  },
+  modalActions: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  editButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  truckPlate: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+    textAlign: 'center',
   },
 });
 
