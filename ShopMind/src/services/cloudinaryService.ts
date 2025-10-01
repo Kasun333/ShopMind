@@ -70,3 +70,17 @@ export const deleteImageFromCloudinary = async (publicId: string): Promise<boole
     return false;
   }
 };
+
+export const testCloudinaryConfig = () => {
+  if (!CLOUDINARY_CLOUD_NAME) {
+    throw new Error('CLOUDINARY_CLOUD_NAME is not configured');
+  }
+  if (!CLOUDINARY_UPLOAD_PRESET) {
+    throw new Error('CLOUDINARY_UPLOAD_PRESET is not configured');
+  }
+  
+  return {
+    cloudName: CLOUDINARY_CLOUD_NAME,
+    uploadPreset: CLOUDINARY_UPLOAD_PRESET
+  };
+};
