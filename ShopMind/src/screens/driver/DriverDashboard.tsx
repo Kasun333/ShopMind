@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { User } from '../../types/User';
 import { DeliveryOrder, TruckInfo, DriverProfile } from '../../types/Driver';
 import { driverService } from '../../services/driverService';
+import { dummyOrders, routeStats } from '../../dummy/driverData';
 
 const { width } = Dimensions.get('window');
 
@@ -79,6 +80,9 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
       // Don't set any mock data - leave profile empty
       setDriverProfile(null);
     }
+    
+    // Load dummy delivery data for today
+    setTodayDeliveries(dummyOrders);
   };
 
 
@@ -187,13 +191,13 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
           
           <View style={styles.statCard}>
             <Ionicons name="map-outline" size={24} color="#16A34A" />
-            <Text style={styles.statNumber}>{(totalDistance / 1000).toFixed(1)}km</Text>
+            <Text style={styles.statNumber}>{(routeStats.totalDistance / 1000).toFixed(1)}km</Text>
             <Text style={styles.statLabel}>Total Distance</Text>
           </View>
           
           <View style={styles.statCard}>
             <Ionicons name="time-outline" size={24} color="#F59E0B" />
-            <Text style={styles.statNumber}>2.5h</Text>
+            <Text style={styles.statNumber}>{(routeStats.totalDuration / 60).toFixed(1)}h</Text>
             <Text style={styles.statLabel}>Est. Time</Text>
           </View>
         </View>
