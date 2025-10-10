@@ -1,20 +1,23 @@
 // API Configuration
 // Change the IP address here when connecting to a different network
 export const API_CONFIG = {
-  BASE_IP: '10.52.239.210', // Change this IP when network changes
+  BASE_IP: '10.239.254.210', // Change this IP when network changes
   
   // Service endpoints
   AUTH_SERVICE: {
-    PORT: '8080',
-    BASE_URL: '',
+    PORT: '',
+    BASE_URL: 'https://userservice-337812374841.us-central1.run.app',
+    HOSTED: true, // Flag to indicate this service is hosted
   },
   ORDER_SERVICE: {
-    PORT: '8084', 
-    BASE_URL: '',
+    PORT: '', // No port since it's on Cloud Run
+    BASE_URL: 'https://orderservice-337812374841.us-central1.run.app', // Hosted URL
+    HOSTED: true,
   },
   PAYMENT_SERVICE: {
-    PORT: '8084',
-    BASE_URL: '',
+    PORT: '',
+    BASE_URL: 'https://orderservice-337812374841.us-central1.run.app', // Using same hosted URL
+    HOSTED: true,
   },
   ECOMMERCE_SERVICE: {
     PORT: '8083',
@@ -22,8 +25,13 @@ export const API_CONFIG = {
   },
   NOTIFICATION_SERVICE: {
     PORT: '8087',
-    BASE_URL: '',
-    WS_URL: '',
+    BASE_URL: 'http://34.136.119.127:8087',
+    WS_URL: 'http://34.136.119.127:8087/ws',
+    HOSTED: true,
+    // Alternative endpoints available:
+    // WS_URL_SOCKJS: 'http://34.136.119.127:8087/notifications', // SockJS fallback
+    // WS_URL_RN_PURE: 'http://34.136.119.127:8087/rn-notifications', // Pure WebSocket (no STOMP)
+    // WS_URL_PURE_STOMP: 'http://34.136.119.127:8087/websocket', // Pure STOMP
   },
   STOCK_ALERTS_SERVICE: {
     PORT: '8085',
@@ -31,13 +39,18 @@ export const API_CONFIG = {
   },
 };
 
-// Auto-generate full URLs
-API_CONFIG.AUTH_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.AUTH_SERVICE.PORT}`;
-API_CONFIG.ORDER_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.ORDER_SERVICE.PORT}`;
-API_CONFIG.PAYMENT_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.PAYMENT_SERVICE.PORT}`;
+// Auto-generate full URLs for services still using BASE_IP (skip hosted services)
+if (!API_CONFIG.AUTH_SERVICE.HOSTED) {
+  API_CONFIG.AUTH_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.AUTH_SERVICE.PORT}`;
+}
+if (!API_CONFIG.PAYMENT_SERVICE.HOSTED) {
+  API_CONFIG.PAYMENT_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.PAYMENT_SERVICE.PORT}`;
+}
 API_CONFIG.ECOMMERCE_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.ECOMMERCE_SERVICE.PORT}`;
-API_CONFIG.NOTIFICATION_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}`;
-API_CONFIG.NOTIFICATION_SERVICE.WS_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}/ws`;
+if (!API_CONFIG.NOTIFICATION_SERVICE.HOSTED) {
+  API_CONFIG.NOTIFICATION_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}`;
+  API_CONFIG.NOTIFICATION_SERVICE.WS_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}/ws`;
+}
 API_CONFIG.STOCK_ALERTS_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.STOCK_ALERTS_SERVICE.PORT}`;
 
 // External APIs (these don't change with network)
@@ -48,7 +61,7 @@ export const EXTERNAL_APIS = {
 
 // Export individual service URLs for easy access
 export const AUTH_API_URL = API_CONFIG.AUTH_SERVICE.BASE_URL;
-export const ORDER_API_URL = API_CONFIG.ORDER_SERVICE.BASE_URL;
+export const ORDER_API_URL = API_CONFIG.ORDER_SERVICE.BASE_URL; // ✅ Uses Cloud Run
 export const PAYMENT_API_URL = API_CONFIG.PAYMENT_SERVICE.BASE_URL;
 export const ECOMMERCE_API_URL = API_CONFIG.ECOMMERCE_SERVICE.BASE_URL;
 export const NOTIFICATION_API_URL = API_CONFIG.NOTIFICATION_SERVICE.BASE_URL;
