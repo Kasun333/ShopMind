@@ -6,6 +6,7 @@ import MessagesScreen from './MessagesScreen';
 import CartNavigation from '../navigation/CartNavigation';
 import AccountScreen from './AccountScreen';
 import ProductDetailScreen from './ProductDetailScreen';
+import DiscountsScreen from './DiscountsScreen';
 import { User } from '../types/User';
 import { Product, Category } from '../types/Product';
 import { useCart } from '../hooks/useCart';
@@ -25,7 +26,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentScreen, setCurrentScreen] = useState<'home' | 'product-detail'>('home');
+  const [currentScreen, setCurrentScreen] = useState<'home' | 'product-detail' | 'discounts'>('home');
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
 
   // Use cart hook for proper cart management
@@ -205,6 +206,14 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
             />
           );
         }
+        if (currentScreen === 'discounts') {
+          return (
+            <DiscountsScreen
+              user={user}
+              onBack={navigateBackToHome}
+            />
+          );
+        }
         return renderHomeScreen();
     }
   };
@@ -240,6 +249,23 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
               spellCheck={false}
             />
           </View>
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.quickActionsSection}>
+          <TouchableOpacity 
+            style={styles.discountsCard}
+            onPress={() => setCurrentScreen('discounts')}
+          >
+            <View style={styles.discountsCardContent}>
+              <Text style={styles.discountsIcon}>🏷️</Text>
+              <View style={styles.discountsInfo}>
+                <Text style={styles.discountsTitle}>View Discounts</Text>
+                <Text style={styles.discountsSubtitle}>Discover amazing deals & offers</Text>
+              </View>
+              <Text style={styles.discountsArrow}>→</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Categories */}
@@ -748,5 +774,48 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '700',
+  },
+  // Quick Actions Section styles
+  quickActionsSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  discountsCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  discountsCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  discountsIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  discountsInfo: {
+    flex: 1,
+  },
+  discountsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  discountsSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  discountsArrow: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    marginLeft: 8,
   },
 });

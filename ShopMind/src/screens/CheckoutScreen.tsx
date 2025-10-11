@@ -8,11 +8,14 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { CardField, useStripe } from '@stripe/stripe-react-native';
 import { useCart } from '../hooks/useCart';
 import { User } from '../types/User';
 import { stripeService, CreatePaymentIntentRequest } from '../services/stripeService';
+import { Discount } from '../types/Discount';
 
 interface CheckoutScreenProps {
   user: User;
@@ -26,10 +29,70 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   onPaymentSuccess,
 }) => {
   const { confirmPayment } = useStripe();
-  const { cartItems, cartSummary, clearCart } = useCart();
+  const { 
+    cartItems, 
+    cartSummary, 
+    cartSummaryWithDiscount,
+    clearCart,
+    applyDiscount,
+    removeDiscount,
+    getApplicableDiscounts,
+    getAppliedDiscount
+  } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardFieldComplete, setCardFieldComplete] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<number | null>(null);
+  
+  // Discount state
+  const [availableDiscounts, setAvailableDiscounts] = useState<Discount[]>([]);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountCode, setDiscountCode] = useState('');
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const appliedDiscountInfo = getAppliedDiscount();
+
+  // Load available discounts when component mounts
+  useEffect(() => {
+    loadAvailableDiscounts();
+  }, []);
+
+  const loadAvailableDiscounts = async () => {
+    try {
+      const discounts = await getApplicableDiscounts();
+      setAvailableDiscounts(discounts);
+    } catch (error) {
+      console.error('Error loading discounts:', error);
+    }
+  };
+
+  const handleApplyDiscount = async (code?: string) => {
+    const codeToApply = code || discountCode;
+    if (!codeToApply.trim()) {
+      Alert.alert('Error', 'Please enter a discount code');
+      return;
+    }
+
+    setIsApplyingDiscount(true);
+    try {
+      const result = await applyDiscount(codeToApply, parseInt(user.id));
+      if (result.success) {
+        Alert.alert('Success', result.message);
+        setDiscountCode('');
+        setShowDiscountModal(false);
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      console.error('Error applying discount:', error);
+      Alert.alert('Error', 'Failed to apply discount. Please try again.');
+    } finally {
+      setIsApplyingDiscount(false);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    removeDiscount();
+    Alert.alert('Success', 'Discount removed');
+  };
 
   // Check if cart is empty
   if (cartItems.length === 0) {
@@ -63,8 +126,12 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       }
 
       // Step 1: Create payment intent on backend
+      const finalAmount = appliedDiscountInfo.discount 
+        ? cartSummaryWithDiscount.total 
+        : cartSummary.total;
+      
       const paymentRequest: CreatePaymentIntentRequest = {
-        amount: Math.round(cartSummary.total * 100), // Convert to cents
+        amount: Math.round(finalAmount * 100), // Convert to cents
         currency: 'usd',
         customerId: parseInt(user.id),
         orderItems: cartItems.map(item => ({
@@ -73,6 +140,11 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           quantity: item.quantity,
           unitPrice: item.price,
         })),
+        // Add discount information if applied
+        ...(appliedDiscountInfo.discount && {
+          discountCode: appliedDiscountInfo.discount.discountCode,
+          discountAmount: appliedDiscountInfo.amount,
+        }),
       };
 
       console.log('Creating payment intent with request:', paymentRequest);
@@ -190,6 +262,48 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           </View>
         </View>
 
+        {/* Discount Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏷️ Discounts</Text>
+          <View style={styles.discountCard}>
+            {appliedDiscountInfo.discount ? (
+              <View style={styles.appliedDiscountContainer}>
+                <View style={styles.appliedDiscountInfo}>
+                  <Text style={styles.appliedDiscountName}>
+                    {appliedDiscountInfo.discount.discountName}
+                  </Text>
+                  <Text style={styles.appliedDiscountCode}>
+                    {appliedDiscountInfo.discount.discountCode}
+                  </Text>
+                  <Text style={styles.appliedDiscountSavings}>
+                    You save: ${appliedDiscountInfo.amount.toFixed(2)}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.removeDiscountButton}
+                  onPress={handleRemoveDiscount}
+                >
+                  <Text style={styles.removeDiscountText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View>
+                <TouchableOpacity 
+                  style={styles.discountButton}
+                  onPress={() => setShowDiscountModal(true)}
+                >
+                  <Text style={styles.discountButtonText}>Apply Discount Code</Text>
+                </TouchableOpacity>
+                {availableDiscounts.length > 0 && (
+                  <Text style={styles.availableDiscountsText}>
+                    {availableDiscounts.length} discount{availableDiscounts.length > 1 ? 's' : ''} available for this order
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+
         {/* Payment Summary */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>💰 Payment Summary</Text>
@@ -206,9 +320,19 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               <Text style={styles.summaryLabel}>Tax</Text>
               <Text style={styles.summaryValue}>${cartSummary.tax.toFixed(2)}</Text>
             </View>
+            {appliedDiscountInfo.discount && (
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, styles.discountLabel]}>Discount</Text>
+                <Text style={[styles.summaryValue, styles.discountValue]}>
+                  -${appliedDiscountInfo.amount.toFixed(2)}
+                </Text>
+              </View>
+            )}
             <View style={[styles.summaryRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>${cartSummary.total.toFixed(2)}</Text>
+              <Text style={styles.totalValue}>
+                ${(appliedDiscountInfo.discount ? cartSummaryWithDiscount.total : cartSummary.total).toFixed(2)}
+              </Text>
             </View>
           </View>
         </View>
@@ -273,11 +397,86 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             </View>
           ) : (
             <Text style={styles.payButtonText}>
-              Pay ${cartSummary.total.toFixed(2)}
+              Pay ${(appliedDiscountInfo.discount ? cartSummaryWithDiscount.total : cartSummary.total).toFixed(2)}
             </Text>
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Discount Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showDiscountModal}
+        onRequestClose={() => setShowDiscountModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Apply Discount</Text>
+              <TouchableOpacity 
+                style={styles.modalCloseButton}
+                onPress={() => setShowDiscountModal(false)}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Manual Code Entry */}
+            <View style={styles.codeInputSection}>
+              <Text style={styles.codeInputLabel}>Enter Discount Code</Text>
+              <TextInput
+                style={styles.codeInput}
+                value={discountCode}
+                onChangeText={setDiscountCode}
+                placeholder="Enter discount code"
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity 
+                style={[styles.applyCodeButton, isApplyingDiscount && styles.disabledButton]}
+                onPress={() => handleApplyDiscount()}
+                disabled={isApplyingDiscount}
+              >
+                {isApplyingDiscount ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.applyCodeButtonText}>Apply Code</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Available Discounts */}
+            {availableDiscounts.length > 0 && (
+              <View style={styles.availableDiscountsSection}>
+                <Text style={styles.availableDiscountsTitle}>Available Discounts</Text>
+                <ScrollView style={styles.discountsList}>
+                  {availableDiscounts.map((discount) => (
+                    <TouchableOpacity 
+                      key={discount.id}
+                      style={styles.discountItem}
+                      onPress={() => handleApplyDiscount(discount.discountCode)}
+                    >
+                      <View style={styles.discountItemLeft}>
+                        <Text style={styles.discountItemName}>{discount.discountName}</Text>
+                        <Text style={styles.discountItemCode}>{discount.discountCode}</Text>
+                        <Text style={styles.discountItemDescription}>{discount.description}</Text>
+                      </View>
+                      <View style={styles.discountItemRight}>
+                        <Text style={styles.discountItemValue}>
+                          {discount.isPercentage 
+                            ? `${discount.discountValue}% OFF` 
+                            : `$${discount.discountValue} OFF`
+                          }
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -539,5 +738,195 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Discount styles
+  discountCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  appliedDiscountContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  appliedDiscountInfo: {
+    flex: 1,
+  },
+  appliedDiscountName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  appliedDiscountCode: {
+    fontSize: 14,
+    color: '#16A34A',
+    marginBottom: 4,
+    fontFamily: 'monospace',
+  },
+  appliedDiscountSavings: {
+    fontSize: 14,
+    color: '#16A34A',
+    fontWeight: '500',
+  },
+  removeDiscountButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  removeDiscountText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  discountButton: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  discountButtonText: {
+    color: '#3B82F6',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  availableDiscountsText: {
+    fontSize: 12,
+    color: '#16A34A',
+    textAlign: 'center',
+  },
+  discountLabel: {
+    color: '#16A34A',
+  },
+  discountValue: {
+    color: '#16A34A',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+  },
+  modalCloseText: {
+    fontSize: 18,
+    color: '#64748B',
+  },
+  codeInputSection: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  codeInputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  codeInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  applyCodeButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
+  },
+  applyCodeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  availableDiscountsSection: {
+    padding: 20,
+  },
+  availableDiscountsTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  discountsList: {
+    maxHeight: 200,
+  },
+  discountItem: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  discountItemLeft: {
+    flex: 1,
+  },
+  discountItemName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  discountItemCode: {
+    fontSize: 12,
+    color: '#16A34A',
+    marginBottom: 4,
+    fontFamily: 'monospace',
+  },
+  discountItemDescription: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  discountItemRight: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  discountItemValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#16A34A',
   },
 });
