@@ -10,9 +10,9 @@ export const API_CONFIG = {
     HOSTED: true, // Flag to indicate this service is hosted
   },
   ORDER_SERVICE: {
-    PORT: '', // No port since it's on Cloud Run
-    BASE_URL: 'https://orderservice-337812374841.us-central1.run.app', // Hosted URL
-    HOSTED: true,
+    PORT: '8084', // No port since it's on Cloud Run
+    BASE_URL: '', // Hosted URL
+    HOSTED: false,
   },
   PAYMENT_SERVICE: {
     PORT: '',
@@ -42,6 +42,9 @@ export const API_CONFIG = {
 // Auto-generate full URLs for services still using BASE_IP (skip hosted services)
 if (!API_CONFIG.AUTH_SERVICE.HOSTED) {
   API_CONFIG.AUTH_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.AUTH_SERVICE.PORT}`;
+}
+if (!API_CONFIG.ORDER_SERVICE.HOSTED) {
+  API_CONFIG.ORDER_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.ORDER_SERVICE.PORT}`;
 }
 if (!API_CONFIG.PAYMENT_SERVICE.HOSTED) {
   API_CONFIG.PAYMENT_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.PAYMENT_SERVICE.PORT}`;
@@ -92,6 +95,17 @@ export const PAGINATED_ORDERS_ENDPOINTS = {
 // Stock alerts API endpoints
 export const STOCK_ALERTS_ENDPOINTS = {
   GET_ALERTS: `${STOCK_ALERTS_API_URL}/api/stock-alerts`,
+};
+
+// Discount API endpoints
+export const DISCOUNT_API_URL = API_CONFIG.ORDER_SERVICE.BASE_URL; // Using order service for discounts
+export const DISCOUNT_ENDPOINTS = {
+  GET_ACTIVE: `${DISCOUNT_API_URL}/api/discounts/active`,
+  VALIDATE: `${DISCOUNT_API_URL}/api/discounts/validate`,
+  APPLY: `${DISCOUNT_API_URL}/api/discounts/apply`,
+  HISTORY: (userId: number) => `${DISCOUNT_API_URL}/api/discounts/history/${userId}`,
+  SAVINGS: (userId: number) => `${DISCOUNT_API_URL}/api/discounts/savings/${userId}`,
+  GET_DETAILS: (discountId: number) => `${DISCOUNT_API_URL}/api/admin/discounts/${discountId}/products`,
 };
 
 // TypeScript types for paginated orders response

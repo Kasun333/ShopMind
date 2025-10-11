@@ -1,4 +1,6 @@
 import { Product } from '../types/Product';
+import { CartSummaryWithDiscount, Discount } from '../types/Discount';
+import { discountService } from './discountService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Using AsyncStorage for persistent storage
@@ -28,6 +30,8 @@ class CartService {
   private listeners: Array<(items: CartItem[]) => void> = [];
   private isInitialized = false;
   private readonly STORAGE_KEY = 'cart_items';
+  private appliedDiscount: Discount | null = null;
+  private discountAmount: number = 0;
 
   constructor() {
     this.initializeCart();
@@ -246,10 +250,100 @@ class CartService {
     };
   }
 
+  // Get cart summary with discount calculations
+  getCartSummaryWithDiscount(): CartSummaryWithDiscount {
+    const baseSummary = this.getCartSummary();
+    
+    return {
+      ...baseSummary,
+      discountAmount: this.discountAmount,
+      total: Math.round((baseSummary.total - this.discountAmount) * 100) / 100,
+      appliedDiscount: this.appliedDiscount ? {
+        id: this.appliedDiscount.id,
+        code: this.appliedDiscount.discountCode,
+        name: this.appliedDiscount.discountName,
+        amount: this.discountAmount,
+      } : undefined,
+    };
+  }
+
+  // Apply discount to cart
+  async applyDiscount(discountCode: string, userId: number): Promise<{ success: boolean; message: string; discountAmount?: number }> {
+    try {
+      const summary = this.getCartSummary();
+      const productIds = this.cartItems.map(item => item.productId);
+
+      const result = await discountService.validateDiscount({
+        discountCode,
+        userId,
+        orderAmount: summary.total,
+        productIds,
+      });
+
+      if (result.applicable) {
+        // Find the discount details
+        const activeDiscounts = await discountService.getActiveDiscounts();
+        const discount = activeDiscounts.find(d => d.discountCode === discountCode);
+        
+        this.appliedDiscount = discount || null;
+        this.discountAmount = result.discountAmount;
+        
+        this.notifyListeners();
+        
+        return {
+          success: true,
+          message: result.message,
+          discountAmount: result.discountAmount,
+        };
+      } else {
+        return {
+          success: false,
+          message: result.message,
+        };
+      }
+    } catch (error) {
+      console.error('Error applying discount:', error);
+      return {
+        success: false,
+        message: 'Failed to apply discount. Please try again.',
+      };
+    }
+  }
+
+  // Remove applied discount
+  removeDiscount(): void {
+    this.appliedDiscount = null;
+    this.discountAmount = 0;
+    this.notifyListeners();
+  }
+
+  // Get applied discount info
+  getAppliedDiscount(): { discount: Discount | null; amount: number } {
+    return {
+      discount: this.appliedDiscount,
+      amount: this.discountAmount,
+    };
+  }
+
+  // Get applicable discounts for current cart
+  async getApplicableDiscounts(): Promise<Discount[]> {
+    try {
+      const summary = this.getCartSummary();
+      const productIds = this.cartItems.map(item => item.productId);
+      
+      return await discountService.getApplicableDiscounts(summary.total, productIds);
+    } catch (error) {
+      console.error('Error getting applicable discounts:', error);
+      return [];
+    }
+  }
+
   // Clear entire cart
   async clearCart(): Promise<void> {
     await this.waitForInitialization();
     this.cartItems = [];
+    this.appliedDiscount = null;
+    this.discountAmount = 0;
     await this.saveToStorage();
     this.notifyListeners();
   }

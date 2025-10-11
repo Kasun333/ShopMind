@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { cartService, CartItem, CartSummary } from '../services/cartService';
 import { Product } from '../types/Product';
+import { CartSummaryWithDiscount, Discount } from '../types/Discount';
 
 export interface UseCartReturn {
   // Cart state
   cartItems: CartItem[];
   cartSummary: CartSummary;
+  cartSummaryWithDiscount: CartSummaryWithDiscount;
   isLoading: boolean;
 
   // Cart actions
@@ -13,6 +15,12 @@ export interface UseCartReturn {
   removeFromCart: (cartItemId: string) => Promise<boolean>;
   updateQuantity: (cartItemId: string, newQuantity: number) => Promise<{ success: boolean; message: string }>;
   clearCart: () => Promise<void>;
+
+  // Discount actions
+  applyDiscount: (discountCode: string, userId: number) => Promise<{ success: boolean; message: string; discountAmount?: number }>;
+  removeDiscount: () => void;
+  getApplicableDiscounts: () => Promise<Discount[]>;
+  getAppliedDiscount: () => { discount: Discount | null; amount: number };
 
   // Utility functions
   isProductInCart: (productId: number) => boolean;
@@ -86,13 +94,35 @@ export const useCart = (): UseCartReturn => {
     return cartService.getCartItemCount();
   };
 
+  // Apply discount
+  const applyDiscount = async (discountCode: string, userId: number) => {
+    return await cartService.applyDiscount(discountCode, userId);
+  };
+
+  // Remove discount
+  const removeDiscount = (): void => {
+    cartService.removeDiscount();
+  };
+
+  // Get applicable discounts
+  const getApplicableDiscounts = async (): Promise<Discount[]> => {
+    return await cartService.getApplicableDiscounts();
+  };
+
+  // Get applied discount info
+  const getAppliedDiscount = () => {
+    return cartService.getAppliedDiscount();
+  };
+
   // Calculate cart summary
   const cartSummary = cartService.getCartSummary();
+  const cartSummaryWithDiscount = cartService.getCartSummaryWithDiscount();
 
   return {
     // State
     cartItems,
     cartSummary,
+    cartSummaryWithDiscount,
     isLoading,
 
     // Actions
@@ -100,6 +130,12 @@ export const useCart = (): UseCartReturn => {
     removeFromCart,
     updateQuantity,
     clearCart,
+
+    // Discount actions
+    applyDiscount,
+    removeDiscount,
+    getApplicableDiscounts,
+    getAppliedDiscount,
 
     // Utilities
     isProductInCart,
