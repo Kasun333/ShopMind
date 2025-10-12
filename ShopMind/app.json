@@ -40,13 +40,19 @@
         "googleMaps": {
           "apiKey": "AIzaSyClDHsonGCcCblH31vvFA0vKEnDokih584"
         }
-      }
+      },
+      "package": "com.kasun333.ShopMind"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "permissions": [
       "LOCATION"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "843df582-8e84-419b-a865-2713a2943b96"
+      }
+    }
   }
 }
