@@ -230,7 +230,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
       
       <View style={styles.header}>
         <Text style={styles.title}>ShopMind</Text>
-        <Text style={styles.subtitle}>Hello, {user.fullName}</Text>
+        <Text style={styles.subtitle}>Hello, {user?.fullName || 'Guest'}</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
