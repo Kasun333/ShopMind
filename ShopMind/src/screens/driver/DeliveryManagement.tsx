@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import * as React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,19 +15,25 @@ import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { DeliveryOrder, RouteInfo } from '../../types/Driver';
+import { User } from '../../types/User';
 import { GOOGLE_MAPS_API_KEY } from '@env';
+import { dummyOrders, dummyCluster, driverStartLocation, optimizedRouteCoordinates, routeStats } from '../../dummy/driverData';
 
 const { width, height } = Dimensions.get('window');
 
 interface DeliveryManagementProps {
+  user: User;
+  token: string;
   onBack: () => void;
 }
 
-const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
+const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, onBack }) => {
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<DeliveryOrder | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [deliveryStarted, setDeliveryStarted] = useState(false);
+  const [currentOrderIndex, setCurrentOrderIndex] = useState(0);
   const [currentLocation, setCurrentLocation] = useState({
     latitude: 6.9271,
     longitude: 79.8612,
@@ -39,11 +46,10 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
   }, []);
 
   const getCurrentLocation = () => {
-    // You can integrate with React Native's Geolocation API here
-    // For now, using Colombo as default location
+    // Use driver start location (warehouse/depot)
     setCurrentLocation({
-      latitude: 6.9271,
-      longitude: 79.8612,
+      latitude: driverStartLocation.latitude,
+      longitude: driverStartLocation.longitude,
     });
   };
 
@@ -112,85 +118,21 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
     };
   };
 
-  const loadDeliveryData = () => {
-    // Hardcoded delivery data
-    const mockOrders: DeliveryOrder[] = [
-      {
-        id: 'DEL001',
-        customerName: 'John Smith',
-        customerAddress: '123 Main St, Colombo 03',
-        customerPhone: '+94771234567',
-        items: [
-          { id: '1', name: 'Samsung Galaxy S23', quantity: 1, price: 250000 },
-          { id: '2', name: 'Phone Case', quantity: 1, price: 5000 }
-        ],
-        totalAmount: 255000,
-        estimatedDeliveryTime: '10:30 AM',
-        distance: 500,
-        coordinates: { latitude: 6.9271, longitude: 79.8612 },
-        status: 'pending'
-      },
-      {
-        id: 'DEL002',
-        customerName: 'Sarah Johnson',
-        customerAddress: '456 Galle Road, Colombo 06',
-        customerPhone: '+94771234568',
-        items: [
-          { id: '3', name: 'iPhone 15 Pro', quantity: 1, price: 380000 }
-        ],
-        totalAmount: 380000,
-        estimatedDeliveryTime: '11:45 AM',
-        distance: 1200,
-        coordinates: { latitude: 6.8851, longitude: 79.8579 },
-        status: 'pending'
-      },
-      {
-        id: 'DEL003',
-        customerName: 'Mike Wilson',
-        customerAddress: '789 Kandy Road, Colombo 07',
-        customerPhone: '+94771234569',
-        items: [
-          { id: '4', name: 'MacBook Pro', quantity: 1, price: 450000 },
-          { id: '5', name: 'Magic Mouse', quantity: 1, price: 25000 }
-        ],
-        totalAmount: 475000,
-        estimatedDeliveryTime: '2:15 PM',
-        distance: 800,
-        coordinates: { latitude: 6.9172, longitude: 79.8648 },
-        status: 'pending'
-      },
-      {
-        id: 'DEL004',
-        customerName: 'Emma Davis',
-        customerAddress: '321 Negombo Road, Colombo 13',
-        customerPhone: '+94771234570',
-        items: [
-          { id: '6', name: 'Sony Headphones', quantity: 1, price: 85000 }
-        ],
-        totalAmount: 85000,
-        estimatedDeliveryTime: '3:30 PM',
-        distance: 1500,
-        coordinates: { latitude: 6.9750, longitude: 79.9250 },
-        status: 'pending'
-      }
-    ];
-
-    setOrders(mockOrders);
-
-    // Create route info
-    const totalDistance = mockOrders.reduce((sum, order) => sum + order.distance, 0);
-    const routeCoordinates = mockOrders.map(order => ({
-      latitude: order.coordinates.latitude,
-      longitude: order.coordinates.longitude,
-      orderId: order.id
-    }));
-
+  const loadDeliveryData = async () => {
+    // Load dummy orders with optimized route from manager
+    setOrders(dummyOrders);
+    
+    // Create route info with optimized coordinates
     const route: RouteInfo = {
-      totalDistance,
-      estimatedTime: Math.ceil(totalDistance / 1000 * 3 + mockOrders.length * 15), // 3 min per km + 15 min per stop
+      totalDistance: routeStats.totalDistance,
+      estimatedTime: routeStats.totalDuration,
       currentOrderIndex: 0,
-      orders: mockOrders,
-      optimizedRoute: routeCoordinates
+      orders: dummyOrders,
+      optimizedRoute: optimizedRouteCoordinates.map((coord, index) => ({
+        latitude: coord.latitude,
+        longitude: coord.longitude,
+        orderId: index === 0 ? 'start' : dummyOrders[index - 1]?.id || `stop_${index}`
+      }))
     };
 
     setRouteInfo(route);
@@ -272,6 +214,70 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
     ]);
   };
 
+  const handleStartClusterDelivery = () => {
+    Alert.alert(
+      'Start Delivery Cluster',
+      `Start delivering ${dummyCluster.clusterName}?\n${dummyCluster.totalOrders} orders to complete`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start',
+          onPress: () => {
+            setDeliveryStarted(true);
+            // Mark first order as in progress
+            const updatedOrders = orders.map((o, index) =>
+              index === 0 ? { ...o, status: 'in_progress' as const, pickupTime: new Date().toISOString() } : o
+            );
+            setOrders(updatedOrders);
+            setCurrentOrderIndex(0);
+          }
+        }
+      ]
+    );
+  };
+
+  const handleCompleteCurrentOrder = () => {
+    const currentOrder = orders[currentOrderIndex];
+    Alert.alert(
+      'Complete Delivery',
+      `Mark Order #${currentOrder.id} as delivered?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Complete',
+          onPress: () => {
+            // Mark current order as delivered
+            const updatedOrders = [...orders];
+            updatedOrders[currentOrderIndex] = {
+              ...updatedOrders[currentOrderIndex],
+              status: 'delivered',
+              deliveryTime: new Date().toISOString()
+            };
+
+            // Check if there are more orders
+            if (currentOrderIndex < orders.length - 1) {
+              // Mark next order as in progress
+              const nextIndex = currentOrderIndex + 1;
+              updatedOrders[nextIndex] = {
+                ...updatedOrders[nextIndex],
+                status: 'in_progress',
+                pickupTime: new Date().toISOString()
+              };
+              setCurrentOrderIndex(nextIndex);
+              Alert.alert('Next Delivery', `Moving to Order #${updatedOrders[nextIndex].id}`);
+            } else {
+              // All orders completed
+              Alert.alert('Cluster Complete!', 'All deliveries in this cluster have been completed.');
+              setDeliveryStarted(false);
+            }
+
+            setOrders(updatedOrders);
+          }
+        }
+      ]
+    );
+  };
+
   const getStatusColor = (status: DeliveryOrder['status']) => {
     switch (status) {
       case 'pending':
@@ -302,6 +308,21 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
     }
   };
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+        return '#EF4444';
+      case 'high':
+        return '#F59E0B';
+      case 'medium':
+        return '#3B82F6';
+      case 'low':
+        return '#6B7280';
+      default:
+        return '#6B7280';
+    }
+  };
+
   const getNextDeliveryDistance = () => {
     const nextOrder = orders.find(order => order.status === 'pending');
     return nextOrder ? nextOrder.distance : 0;
@@ -313,7 +334,7 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
 
   // Calculate derived values for rendering
   const nextDeliveryDistance = getNextDeliveryDistance();
-  const currentOrderIndex = getCurrentOrderIndex();
+  const activeOrderIndex = getCurrentOrderIndex();
   const nextOrder = orders.find(order => order.status === 'pending');
 
   return (
@@ -327,10 +348,37 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Delivery Route</Text>
+          <Text style={styles.headerTitle}>Orders & Tasks</Text>
           <TouchableOpacity style={styles.menuButton}>
             <Ionicons name="menu" size={24} color="#FFFFFF" />
           </TouchableOpacity>
+        </View>
+
+        {/* Cluster Info */}
+        <View style={styles.clusterInfoContainer}>
+          <View style={styles.clusterHeader}>
+            <Ionicons name="layers" size={20} color="#FFFFFF" />
+            <Text style={styles.clusterName}>{dummyCluster.clusterName}</Text>
+          </View>
+          <Text style={styles.clusterMeta}>
+            Cluster #{dummyCluster.clusterId} • {dummyCluster.totalOrders} Orders • {dummyCluster.status.toUpperCase()}
+          </Text>
+          {!deliveryStarted && (
+            <TouchableOpacity style={styles.startClusterButton} onPress={handleStartClusterDelivery}>
+              <Ionicons name="play-circle" size={20} color="#FFFFFF" />
+              <Text style={styles.startClusterButtonText}>Start Delivery Cluster</Text>
+            </TouchableOpacity>
+          )}
+          {deliveryStarted && (
+            <View style={styles.deliveryProgress}>
+              <Text style={styles.progressText}>
+                Delivering: Order {currentOrderIndex + 1} of {orders.length}
+              </Text>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${((currentOrderIndex + 1) / orders.length) * 100}%` }]} />
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Route Info */}
@@ -346,8 +394,9 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
         )}
       </LinearGradient>
 
-      {/* Map */}
-      <View style={styles.mapContainer}>
+      {/* Map - Only show when delivery started */}
+      {deliveryStarted && (
+        <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
@@ -451,10 +500,43 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
           </TouchableOpacity>
         </View>
       </View>
+      )}
+
+      {/* Current Order - Show when delivery started */}
+      {deliveryStarted && orders[currentOrderIndex] && (
+        <View style={styles.currentOrderContainer}>
+          <View style={styles.currentOrderHeader}>
+            <Text style={styles.currentOrderTitle}>Current Delivery</Text>
+            <TouchableOpacity style={styles.deliveryCompleteButton} onPress={handleCompleteCurrentOrder}>
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+              <Text style={styles.deliveryCompleteButtonText}>Complete</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.currentOrderCard}>
+            <Text style={styles.currentOrderId}>Order #{orders[currentOrderIndex].id}</Text>
+            <Text style={styles.currentOrderCustomer}>{orders[currentOrderIndex].customerName}</Text>
+            <Text style={styles.currentOrderAddress}>{orders[currentOrderIndex].customerAddress}</Text>
+            <View style={styles.currentOrderMeta}>
+              <View style={styles.metaItem}>
+                <Ionicons name="location" size={16} color="#6B7280" />
+                <Text style={styles.metaText}>{orders[currentOrderIndex].distance}m</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="time" size={16} color="#6B7280" />
+                <Text style={styles.metaText}>{orders[currentOrderIndex].estimatedDeliveryTime}</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="list" size={16} color="#6B7280" />
+                <Text style={styles.metaText}>Stop {currentOrderIndex + 1}/{orders.length}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Orders List */}
       <View style={styles.ordersContainer}>
-        <Text style={styles.ordersTitle}>Today's Deliveries ({orders.length})</Text>
+        <Text style={styles.ordersTitle}>Assigned Orders ({orders.length})</Text>
         
         <ScrollView 
           horizontal 
@@ -474,36 +556,39 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
               }}
             >
               <View style={styles.orderHeader}>
-                <Text style={styles.orderNumber}>#{order.id.slice(-2)}</Text>
+                <View style={styles.sequenceBadge}>
+                  <Text style={styles.sequenceText}>{order.sequence}</Text>
+                </View>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
                   <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
                 </View>
               </View>
               
+              <Text style={styles.orderIdText}>Order #{order.id}</Text>
               <Text style={styles.orderCustomer} numberOfLines={1}>{order.customerName}</Text>
-              <Text style={styles.orderDistance}>{order.distance}m away</Text>
-              <Text style={styles.orderTime}>{order.estimatedDeliveryTime}</Text>
+              <Text style={styles.orderAddress} numberOfLines={2}>{order.customerAddress}</Text>
               
-              {order.status === 'pending' && (
-                <TouchableOpacity 
-                  style={styles.startButton}
-                  onPress={() => handleStartDelivery(order)}
-                >
-                  <Text style={styles.startButtonText}>Start</Text>
-                </TouchableOpacity>
-              )}
-              
-              {order.status === 'in_progress' && (
-                <TouchableOpacity 
-                  style={styles.completeButton}
-                  onPress={() => handleCompleteDelivery(order)}
-                >
-                  <Text style={styles.completeButtonText}>Complete</Text>
-                </TouchableOpacity>
-              )}
+              <View style={styles.orderFooter}>
+                <View style={styles.orderMetaItem}>
+                  <Ionicons name="location" size={14} color="#6B7280" />
+                  <Text style={styles.orderMetaText}>{order.distance}m</Text>
+                </View>
+                <View style={styles.orderMetaItem}>
+                  <Ionicons name="time" size={14} color="#6B7280" />
+                  <Text style={styles.orderMetaText}>{order.estimatedDeliveryTime}</Text>
+                </View>
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
+        
+        {orders.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons name="list-outline" size={64} color="#D1D5DB" />
+            <Text style={styles.emptyTitle}>No Orders Assigned</Text>
+            <Text style={styles.emptyMessage}>You don't have any delivery orders at the moment. Check back later for new assignments.</Text>
+          </View>
+        )}
       </View>
 
       {/* Order Details Modal */}
@@ -569,7 +654,41 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ onBack }) => {
                       <Ionicons name="checkmark-circle" size={16} color={getStatusColor(selectedOrder.status)} />
                       <Text style={styles.infoText}>{getStatusText(selectedOrder.status)}</Text>
                     </View>
+                    {selectedOrder.sequence && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="list" size={16} color="#6B7280" />
+                        <Text style={styles.infoText}>Sequence: #{selectedOrder.sequence}</Text>
+                      </View>
+                    )}
+                    {selectedOrder.priority && selectedOrder.priority !== 'low' && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="flag" size={16} color={getPriorityColor(selectedOrder.priority)} />
+                        <Text style={[styles.infoText, { color: getPriorityColor(selectedOrder.priority) }]}>
+                          Priority: {selectedOrder.priority.toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
                   </View>
+
+                  {selectedOrder.specialInstructions && (
+                    <View style={styles.specialInstructionsSection}>
+                      <Text style={styles.modalSectionTitle}>Special Instructions</Text>
+                      <View style={styles.instructionsContainer}>
+                        <Ionicons name="information-circle" size={20} color="#F59E0B" />
+                        <Text style={styles.instructionsText}>{selectedOrder.specialInstructions}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {selectedOrder.managerNotes && (
+                    <View style={styles.managerNotesSection}>
+                      <Text style={styles.modalSectionTitle}>Manager Notes</Text>
+                      <View style={styles.notesContainer}>
+                        <Ionicons name="document-text" size={20} color="#3B82F6" />
+                        <Text style={styles.notesText}>{selectedOrder.managerNotes}</Text>
+                      </View>
+                    </View>
+                  )}
                 </ScrollView>
 
                 <View style={styles.modalActions}>
@@ -740,6 +859,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  orderHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  priorityBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  priorityText: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  specialInstructionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 8,
+    marginBottom: 8,
+    backgroundColor: '#FEF3C7',
+    padding: 8,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  specialInstructions: {
+    fontSize: 12,
+    color: '#92400E',
+    marginLeft: 6,
+    flex: 1,
+    fontStyle: 'italic',
   },
   orderNumber: {
     fontSize: 16,
@@ -943,6 +1095,245 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  specialInstructionsSection: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  instructionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: '#92400E',
+    marginLeft: 8,
+    flex: 1,
+    fontStyle: 'italic',
+  },
+  managerNotesSection: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  notesContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EBF4FF',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3B82F6',
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#1E40AF',
+    marginLeft: 8,
+    flex: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 64,
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyMessage: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  clusterInfoContainer: {
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+  },
+  clusterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  clusterName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+  },
+  clusterMeta: {
+    fontSize: 12,
+    color: '#E2E8F0',
+    marginBottom: 12,
+  },
+  startClusterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#16A34A',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  startClusterButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  deliveryProgress: {
+    marginTop: 8,
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#16A34A',
+  },
+  currentOrderContainer: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  currentOrderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  currentOrderTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  deliveryCompleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16A34A',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  deliveryCompleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  currentOrderCard: {
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3B82F6',
+  },
+  currentOrderId: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  currentOrderCustomer: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#3B82F6',
+    marginBottom: 4,
+  },
+  currentOrderAddress: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 12,
+  },
+  currentOrderMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  sequenceBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sequenceText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  orderIdText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  orderAddress: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  orderFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  orderMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  orderMetaText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
   },
 });
 
