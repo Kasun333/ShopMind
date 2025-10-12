@@ -10,18 +10,19 @@ export const API_CONFIG = {
     HOSTED: true, // Flag to indicate this service is hosted
   },
   ORDER_SERVICE: {
-    PORT: '8084', // No port since it's on Cloud Run
-    BASE_URL: '', // Hosted URL
-    HOSTED: false,
+    PORT: '', // No port since it's on Cloud Run
+    BASE_URL: 'https://order-service-337812374841.us-central1.run.app', // Hosted URL
+    HOSTED: true,
   },
   PAYMENT_SERVICE: {
     PORT: '',
-    BASE_URL: 'https://orderservice-337812374841.us-central1.run.app', // Using same hosted URL
+    BASE_URL: 'https://order-service-337812374841.us-central1.run.app', // Using same hosted URL as order service
     HOSTED: true,
   },
   ECOMMERCE_SERVICE: {
-    PORT: '8083',
-    BASE_URL: '',
+    PORT: '',
+    BASE_URL: 'https://d201c53c-c644-4920-ab04-ef977962e680-dev.e1-us-east-azure.choreoapis.dev/invfentory/productservice-gw/v1.0',
+    HOSTED: true,
   },
   NOTIFICATION_SERVICE: {
     PORT: '8087',
@@ -38,8 +39,9 @@ export const API_CONFIG = {
     BASE_URL: '',
   },
   DRIVER_SERVICE: {
-    PORT: '8090',
-    BASE_URL: '',
+    PORT: '',
+    BASE_URL: 'https://d201c53c-c644-4920-ab04-ef977962e680-dev.e1-us-east-azure.choreoapis.dev/invfentory/resourseservice/v1.0',
+    HOSTED: true,
   },
 };
 
@@ -53,13 +55,17 @@ if (!API_CONFIG.ORDER_SERVICE.HOSTED) {
 if (!API_CONFIG.PAYMENT_SERVICE.HOSTED) {
   API_CONFIG.PAYMENT_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.PAYMENT_SERVICE.PORT}`;
 }
-API_CONFIG.ECOMMERCE_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.ECOMMERCE_SERVICE.PORT}`;
+if (!API_CONFIG.ECOMMERCE_SERVICE.HOSTED) {
+  API_CONFIG.ECOMMERCE_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.ECOMMERCE_SERVICE.PORT}`;
+}
 if (!API_CONFIG.NOTIFICATION_SERVICE.HOSTED) {
   API_CONFIG.NOTIFICATION_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}`;
   API_CONFIG.NOTIFICATION_SERVICE.WS_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}/ws`;
 }
 API_CONFIG.STOCK_ALERTS_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.STOCK_ALERTS_SERVICE.PORT}`;
-API_CONFIG.DRIVER_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.DRIVER_SERVICE.PORT}`;
+if (!API_CONFIG.DRIVER_SERVICE.HOSTED) {
+  API_CONFIG.DRIVER_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.DRIVER_SERVICE.PORT}`;
+}
 
 // External APIs (these don't change with network)
 export const EXTERNAL_APIS = {
