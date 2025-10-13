@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Dimensions, Animated } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Dimensions, Animated, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { User } from '../types/User';
 import { AuthService } from '../services/authService';
@@ -17,6 +17,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
   const [focusedInput, setFocusedInput] = useState<null | 'username' | 'password'>(null);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [slideAnim] = useState(new Animated.Value(-300));
+  const [isLoading, setIsLoading] = useState(false);
 
   const showToast = (message: string, type = 'success') => {
     setToast({ visible: true, message, type });
@@ -50,6 +51,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
       return;
     }
 
+    setIsLoading(true);
     try {
       console.log('LoginScreen - Attempting login with:', { username: cleanUsername, password: cleanPassword });
       const result = await AuthService.login({ username: cleanUsername, password: cleanPassword });
@@ -69,6 +71,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
     } catch (error) {
       console.error('Login error:', error);
       showToast('Could not connect to server', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -111,7 +115,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
             <TextInput
               style={[
                 styles.input,
-                focusedInput === 'username' && styles.inputFocused
+                focusedInput === 'username' && styles.inputFocused,
+                isLoading && styles.inputDisabled
               ]}
               placeholder="Enter your username"
               placeholderTextColor="#94A3B8"
@@ -119,6 +124,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
               onChangeText={setUsername}
               onFocus={() => setFocusedInput('username')}
               onBlur={() => setFocusedInput(null)}
+              editable={!isLoading}
             />
           </View>
 
@@ -127,7 +133,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
             <TextInput
               style={[
                 styles.input,
-                focusedInput === 'password' && styles.inputFocused
+                focusedInput === 'password' && styles.inputFocused,
+                isLoading && styles.inputDisabled
               ]}
               placeholder="Enter your password"
               placeholderTextColor="#94A3B8"
@@ -136,26 +143,50 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
               onChangeText={setPassword}
               onFocus={() => setFocusedInput('password')}
               onBlur={() => setFocusedInput(null)}
+              editable={!isLoading}
             />
           </View>
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+          <TouchableOpacity 
+            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
+            onPress={handleLogin}
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
             <LinearGradient
-              colors={['#2A7CC7', '#1E6091']}
+              colors={isLoading ? ['#94A3B8', '#64748B'] : ['#2A7CC7', '#1E6091']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.buttonGradient}
             >
-              <Text style={styles.loginButtonText}>Sign In</Text>
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.loginButtonText}>Signing In...</Text>
+                </View>
+              ) : (
+                <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
+          <TouchableOpacity 
+            style={styles.forgotPassword}
+            disabled={isLoading}
+          >
+            <Text style={[styles.forgotPasswordText, isLoading && styles.disabledText]}>
+              Forgot your password?
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.signupButton} onPress={onShowSignup}>
-            <Text style={styles.signupButtonText}>Create New Account</Text>
+          <TouchableOpacity 
+            style={[styles.signupButton, isLoading && styles.signupButtonDisabled]} 
+            onPress={onShowSignup}
+            disabled={isLoading}
+          >
+            <Text style={[styles.signupButtonText, isLoading && styles.disabledText]}>
+              Create New Account
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -234,6 +265,10 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontWeight: '500',
   },
+  inputDisabled: {
+    opacity: 0.6,
+    backgroundColor: '#F1F5F9',
+  },
   inputFocused: {
     borderColor: '#3B95E3',
     backgroundColor: '#FFFFFF',
@@ -262,11 +297,21 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+  loginButtonDisabled: {
+    opacity: 0.7,
+    shadowOpacity: 0.1,
+    elevation: 2,
+  },
   buttonGradient: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   loginButtonText: {
     color: '#FFFFFF',
@@ -292,10 +337,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(42, 124, 199, 0.05)',
   },
+  signupButtonDisabled: {
+    opacity: 0.5,
+    borderColor: '#94A3B8',
+    backgroundColor: 'rgba(148, 163, 184, 0.05)',
+  },
   signupButtonText: {
     color: '#2A7CC7',
     fontSize: 14,
     fontWeight: '600',
+  },
+  disabledText: {
+    color: '#94A3B8',
   },
   toast: {
     position: 'absolute',
