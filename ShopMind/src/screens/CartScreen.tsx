@@ -14,9 +14,10 @@ interface CartScreenProps {
   };
   token: string;
   onNavigateToCheckout?: () => void;
+  onNavigateToEcommerce?: () => void;
 }
 
-const CartScreen: React.FC<CartScreenProps> = ({ user, token, onNavigateToCheckout }) => {
+const CartScreen: React.FC<CartScreenProps> = ({ user, token, onNavigateToCheckout, onNavigateToEcommerce }) => {
   // Use the cart hook instead of hardcoded items
   const { 
     cartItems, 
@@ -57,7 +58,10 @@ const CartScreen: React.FC<CartScreenProps> = ({ user, token, onNavigateToChecko
             <Text style={styles.emptyCartIcon}>🛒</Text>
             <Text style={styles.emptyCartTitle}>Your cart is empty</Text>
             <Text style={styles.emptyCartSubtitle}>Add some products to get started</Text>
-            <TouchableOpacity style={styles.shopNowButton}>
+            <TouchableOpacity 
+              style={styles.shopNowButton}
+              onPress={onNavigateToEcommerce}
+            >
               <Text style={styles.shopNowButtonText}>Start Shopping</Text>
             </TouchableOpacity>
           </View>

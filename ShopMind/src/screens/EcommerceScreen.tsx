@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, FlatList, TextInput, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, FlatList, TextInput, Alert, Image, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import BottomNavigation from '../components/BottomNavigation';
 import MessagesScreen from './MessagesScreen';
 import CartNavigation from '../navigation/CartNavigation';
 import AccountScreen from './AccountScreen';
 import ProductDetailScreen from './ProductDetailScreen';
 import DiscountsScreen from './DiscountsScreen';
+import ProductSkeleton from '../components/ProductSkeleton';
 import { User } from '../types/User';
 import { Product, Category } from '../types/Product';
 import { useCart } from '../hooks/useCart';
@@ -186,13 +188,18 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     setCurrentScreen('home'); // Reset to home screen when changing tabs
   };
 
+  const handleNavigateToEcommerce = () => {
+    setActiveTab('home');
+    setCurrentScreen('home');
+  };
+
   // Render different screens based on active tab
   const renderScreen = () => {
     switch (activeTab) {
       case 'messages':
         return <MessagesScreen user={user} token={token} />;
       case 'cart':
-        return <CartNavigation user={user} token={token} />;
+        return <CartNavigation user={user} token={token} onNavigateToEcommerce={handleNavigateToEcommerce} />;
       case 'account':
         return <AccountScreen user={user} token={token} onLogout={onLogout} />;
       default:
@@ -758,13 +765,14 @@ const styles = StyleSheet.create({
   },
   cartBadge: {
     position: 'absolute',
-    top: -3,
-    right: -3,
+    top: -5,
+    right: -5,
     backgroundColor: '#EF4444',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
+    borderRadius: 12,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    minWidth: 22,
+    minHeight: 22,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -772,8 +780,9 @@ const styles = StyleSheet.create({
   },
   cartBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
+    lineHeight: 14,
   },
   // Quick Actions Section styles
   quickActionsSection: {

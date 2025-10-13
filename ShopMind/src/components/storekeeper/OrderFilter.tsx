@@ -315,9 +315,9 @@ const OrderFilter: React.FC<OrderFilterProps> = ({ filters, onFiltersChange }) =
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(5, 150, 105, 0.1)',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   searchContainer: {
     marginBottom: 12,

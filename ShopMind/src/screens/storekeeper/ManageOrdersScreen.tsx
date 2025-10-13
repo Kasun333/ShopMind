@@ -430,7 +430,9 @@ const ManageOrdersScreen: React.FC<ManageOrdersScreenProps> = ({ user, token }) 
               {/* Content Area */}
               <View style={styles.mainContent}>
                 {/* Filters */}
-                <OrderFilter filters={filters} onFiltersChange={setFilters} />
+                <View style={styles.filterWrapper}>
+                  <OrderFilter filters={filters} onFiltersChange={setFilters} />
+                </View>
 
                 {/* Orders List */}
                 <FlatList
@@ -475,7 +477,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: '25%',
+    height: '30%',
   },
   loadingGradient: {
     flex: 1,
@@ -491,7 +493,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 24,
     paddingHorizontal: 20,
   },
   headerTop: {
@@ -579,15 +581,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginTop: -20,
-    paddingTop: 20,
+    marginTop: 12,
+    paddingTop: 0,
     overflow: 'hidden',
+  },
+  filterWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
+    zIndex: 10,
   },
   list: {
     flex: 1,
     paddingHorizontal: 16,
   },
   listContentContainer: {
+    paddingTop: 16,
     paddingBottom: 20,
   },
   emptyListContainer: {

@@ -7,11 +7,12 @@ import { User } from '../types/User';
 interface CartNavigationProps {
   user: User;
   token: string;
+  onNavigateToEcommerce?: () => void;
 }
 
 export type CartNavigationScreen = 'cart' | 'checkout';
 
-const CartNavigation: React.FC<CartNavigationProps> = ({ user, token }) => {
+const CartNavigation: React.FC<CartNavigationProps> = ({ user, token, onNavigateToEcommerce }) => {
   const [currentScreen, setCurrentScreen] = useState<CartNavigationScreen>('cart');
 
   const handleNavigateToCheckout = () => {
@@ -34,6 +35,7 @@ const CartNavigation: React.FC<CartNavigationProps> = ({ user, token }) => {
           user={user}
           token={token}
           onNavigateToCheckout={handleNavigateToCheckout}
+          onNavigateToEcommerce={onNavigateToEcommerce}
         />
       )}
       {currentScreen === 'checkout' && (
