@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import UserOrdersComponent from '../components/UserOrdersComponent';
 import NotificationCard from '../components/NotificationCard';
+import NotificationSkeleton from '../components/NotificationSkeleton';
 import useNotifications from '../hooks/useNotifications';
 import useAppStateNotifications from '../hooks/useAppStateNotifications';
 import notificationService, { Notification } from '../services/notificationService';
@@ -23,7 +24,7 @@ interface MessagesScreenProps {
 }
 
 const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
-  const [activeTab, setActiveTab] = useState<'messages' | 'notifications' | 'orders'>('messages');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'orders'>('notifications');
   
   // Use notifications hook
   const {
@@ -164,40 +165,26 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
     <View style={styles.container}>
       {/* Header with Gradient */}
       <LinearGradient
-        colors={['#1E6091', '#2A7CC7', '#3B95E3']}
+        colors={['#072033ff', '#2A7CC7', '#245e91ff']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Messages & Orders</Text>
-          <Text style={styles.subtitle}>Stay connected and track your purchases</Text>
+          <Text style={styles.title}>Activity Center</Text>
+          <Text style={styles.subtitle}>Track your orders and stay updated</Text>
         </View>
         
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'messages' && styles.activeTab]}
-            onPress={() => setActiveTab('messages')}
-          >
-            <Ionicons 
-              name="chatbubble-outline" 
-              size={16} 
-              color={activeTab === 'messages' ? '#FFFFFF' : 'rgba(255,255,255,0.7)'} 
-            />
-            <Text style={[styles.tabText, activeTab === 'messages' && styles.activeTabText]}>
-              Messages
-            </Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.tab, styles.notificationTab, activeTab === 'notifications' && styles.activeTab]}
             onPress={() => setActiveTab('notifications')}
           >
             <View style={styles.tabIconContainer}>
               <Ionicons 
-                name="notifications-outline" 
-                size={16} 
+                name="notifications" 
+                size={18} 
                 color={activeTab === 'notifications' ? '#FFFFFF' : 'rgba(255,255,255,0.7)'} 
               />
               {unreadCount > 0 && (
@@ -209,11 +196,6 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
             <Text style={[styles.tabText, activeTab === 'notifications' && styles.activeTabText]}>
               Notifications
             </Text>
-            {unreadCount > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
-              </View>
-            )}
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -221,8 +203,8 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
             onPress={() => setActiveTab('orders')}
           >
             <Ionicons 
-              name="cube-outline" 
-              size={16} 
+              name="receipt" 
+              size={18} 
               color={activeTab === 'orders' ? '#FFFFFF' : 'rgba(255,255,255,0.7)'} 
             />
             <Text style={[styles.tabText, activeTab === 'orders' && styles.activeTabText]}>
@@ -233,223 +215,96 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, token }) => {
       </LinearGradient>
 
       {/* Content Area */}
-      {activeTab === 'messages' ? (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.conversationsList}>
-            {conversations.map((conversation) => (
-              <TouchableOpacity 
-                key={conversation.id} 
-                style={[styles.conversationCard, conversation.unread > 0 && styles.conversationCardUnread]}
-                activeOpacity={0.7}
-              >
-                <View style={styles.avatarContainer}>
-                  <View style={[
-                    styles.avatarBackground,
-                    conversation.unread > 0 ? styles.avatarBackgroundUnread : null
-                  ]}>
-                    <Ionicons 
-                      name={conversation.icon as any} 
-                      size={24} 
-                      color={conversation.unread > 0 ? "#FFFFFF" : "#2A7CC7"} 
-                    />
-                  </View>
-                  {conversation.unread > 0 && (
-                    <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadCount}>{conversation.unread}</Text>
-                    </View>
-                  )}
-                </View>
-                
-                <View style={styles.conversationContent}>
-                  <View style={styles.conversationHeader}>
-                    <Text style={styles.conversationName}>{conversation.name}</Text>
-                    <Text style={styles.conversationTime}>{conversation.time}</Text>
-                  </View>
-                  <Text style={[
-                    styles.lastMessage,
-                    conversation.unread > 0 && styles.unreadMessage
-                  ]}>
-                    {conversation.lastMessage}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            
-            <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-              <LinearGradient
-                colors={['rgba(42, 124, 199, 0.15)', 'rgba(30, 96, 145, 0.1)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIconContainer}
-              >
-                <Ionicons name="help-buoy-outline" size={24} color="#2A7CC7" />
-              </LinearGradient>
-              <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Contact Support</Text>
-                <Text style={styles.actionSubtitle}>Get help with your orders or account</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-              <LinearGradient
-                colors={['rgba(42, 124, 199, 0.15)', 'rgba(30, 96, 145, 0.1)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionIconContainer}
-              >
-                <Ionicons name="chatbubble-outline" size={24} color="#2A7CC7" />
-              </LinearGradient>
-              <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Start New Chat</Text>
-                <Text style={styles.actionSubtitle}>Connect with stores directly</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.statusInfo}>
-            <Text style={styles.statusText}>
-              <Ionicons name="time-outline" size={12} color="#64748B" /> Last updated: 2025-09-02 10:22:44
-            </Text>
-          </View>
-        </ScrollView>
-      ) : activeTab === 'notifications' ? (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Connection Status */}
-          <View style={styles.connectionStatus}>
-            <View style={styles.statusRow}>
-              <View style={[styles.connectionDot, { backgroundColor: connected ? '#10B981' : '#EF4444' }]} />
-              <Text style={styles.connectionText}>
-                              <View style={styles.connectionInfo}>
-                <Text style={styles.connectionText}>
-                  {connected ? '🟢 Real-time connected' : '🔴 Real-time disconnected'}
-                </Text>
-                <Text style={styles.permissionText}>
-                  {notificationPermissions ? '� Local notifications enabled' : '❌ No notification permissions'}
-                </Text>
-              </View>
-              </Text>
-              {!connected && (
-                <TouchableOpacity onPress={forceReconnect} style={styles.reconnectButton}>
-                  <Text style={styles.reconnectText}>Reconnect</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity 
-                style={styles.debugButton} 
-                onPress={() => setShowDebug(!showDebug)}
-              >
-                <Ionicons name="bug-outline" size={12} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Debug Info */}
-            {showDebug && (
-              <View style={styles.debugInfo}>
-                <Text style={styles.debugText}>{getDebugInfo()}</Text>
-              </View>
-            )}
-            
-            {unreadCount > 0 && (
-              <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllReadButton}>
-                <Text style={styles.markAllReadText}>Mark all as read</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Notifications Header */}
+      {activeTab === 'notifications' ? (
+        <View style={styles.content}>
+          {/* Fixed Notifications Header */}
           <View style={styles.notificationsHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>
-                Real-time Notifications
-                {notifications.length > 0 && (
-                  <Text style={styles.notificationCount}> ({notifications.length})</Text>
-                )}
-              </Text>
-              <Text style={styles.sectionSubtitle}>
-                Stay updated with your orders and activities
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+              <View style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 20, 
+                backgroundColor: 'rgba(42, 124, 199, 0.1)', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                <MaterialCommunityIcons name="bell-ring" size={22} color="#2A7CC7" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>
+                  Notifications
+                  {notifications.length > 0 && (
+                    <Text style={styles.notificationCount}> • {notifications.length}</Text>
+                  )}
+                </Text>
+                <Text style={styles.sectionSubtitle}>
+                  Stay updated with your activities
+                </Text>
+              </View>
             </View>
             
             <View style={styles.notificationActions}>
-              <TouchableOpacity onPress={handleRefreshNotifications} style={styles.refreshButton} disabled={isLoading}>
-                <Ionicons 
-                  name={isLoading ? "refresh" : "refresh-outline"} 
-                  size={16} 
-                  color={isLoading ? "#94A3B8" : "#10B981"} 
-                />
-              </TouchableOpacity>
-              
-              <TouchableOpacity onPress={sendTestNotification} style={styles.testButton}>
-                <Ionicons name="flask-outline" size={16} color="#2A7CC7" />
-                <Text style={styles.testButtonText}>WS Test</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity onPress={testLocalNotification} style={styles.localTestButton}>
-                <Ionicons name="phone-portrait-outline" size={16} color="#10B981" />
-                <Text style={styles.localTestButtonText}>Local</Text>
-              </TouchableOpacity>
-              
-              {notifications.length > 0 && (
-                <TouchableOpacity onPress={handleClearAllNotifications} style={styles.clearButton}>
-                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
+              {unreadCount > 0 && (
+                <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllReadButton}>
+                  <Ionicons name="checkmark-done" size={16} color="#10B981" />
                 </TouchableOpacity>
               )}
-            </View>
-          </View>
-
-
-
-          {/* Loading State */}
-          {isLoading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#2A7CC7" />
-              <Text style={styles.loadingText}>Loading notifications...</Text>
-            </View>
-          )}
-
-          {/* Notifications List */}
-          {!isLoading && notifications.length > 0 ? (
-            <View style={styles.notificationsList}>
-              {notifications.map((notification) => (
-                <NotificationCard
-                  key={notification.id}
-                  notification={notification}
-                  onPress={handleNotificationPress}
-                  onMarkAsRead={markAsRead}
-                  onDelete={clearNotification}
+              
+              <TouchableOpacity onPress={handleRefreshNotifications} style={styles.refreshButton} disabled={isLoading}>
+                <Ionicons 
+                  name="refresh" 
+                  size={18} 
+                  color={isLoading ? "#94A3B8" : "#6366F1"} 
                 />
-              ))}
-            </View>
-          ) : !isLoading && (
-            <View style={styles.emptyNotifications}>
-              <Ionicons name="notifications-outline" size={64} color="#CBD5E1" />
-              <Text style={styles.emptyNotificationsTitle}>No Notifications</Text>
-              <Text style={styles.emptyNotificationsSubtitle}>
-                You're all caught up! New notifications will appear here.
-              </Text>
-              <TouchableOpacity onPress={sendTestNotification} style={styles.testNotificationButton}>
-                <LinearGradient
-                  colors={['#2A7CC7', '#1E6091']}
-                  style={styles.testNotificationGradient}
-                >
-                  <Ionicons name="flask-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.testNotificationButtonText}>Send Test Notification</Text>
-                </LinearGradient>
               </TouchableOpacity>
             </View>
-          )}
-
-          <View style={styles.statusInfo}>
-            <Text style={styles.statusText}>
-              <Ionicons name="time-outline" size={12} color="#64748B" /> Last updated: {new Date().toLocaleString()}
-            </Text>
           </View>
-        </ScrollView>
+
+          {/* Scrollable Notifications List */}
+          <ScrollView style={styles.notificationsScrollView} showsVerticalScrollIndicator={false}>
+            {/* Loading State with Shimmer */}
+            {isLoading && (
+              <View style={styles.notificationsList}>
+                <NotificationSkeleton />
+                <NotificationSkeleton />
+                <NotificationSkeleton />
+              </View>
+            )}
+
+            {/* Notifications List */}
+            {!isLoading && notifications.length > 0 ? (
+              <View style={styles.notificationsList}>
+                {notifications.map((notification) => (
+                  <NotificationCard
+                    key={notification.id}
+                    notification={notification}
+                    onPress={handleNotificationPress}
+                    onMarkAsRead={markAsRead}
+                    onDelete={clearNotification}
+                  />
+                ))}
+              </View>
+            ) : !isLoading && (
+              <View style={styles.emptyNotifications}>
+                <View style={{ 
+                  width: 100, 
+                  height: 100, 
+                  borderRadius: 50, 
+                  backgroundColor: 'rgba(42, 124, 199, 0.1)', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  marginBottom: 20
+                }}>
+                  <Ionicons name="notifications-outline" size={50} color="#2A7CC7" />
+                </View>
+                <Text style={styles.emptyNotificationsTitle}>No Notifications Yet</Text>
+                <Text style={styles.emptyNotificationsSubtitle}>
+                  You're all caught up! New notifications will appear here.
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
       ) : (
         <UserOrdersComponent 
           userId={parseInt(user.id)} 
@@ -478,12 +333,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   headerGradient: {
-    paddingTop: 50,
+    paddingTop: 0,
     paddingBottom: 30,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
   },
   header: {
+    paddingTop: 50,
     paddingHorizontal: 20,
   },
   title: {
@@ -552,6 +408,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     marginTop: -20,
+  },
+  notificationsScrollView: {
+    flex: 1,
   },
   conversationsList: {
     marginBottom: 24,
@@ -647,12 +506,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 12,
     letterSpacing: -0.3,
-    paddingHorizontal: 4,
   },
   actionButton: {
     backgroundColor: '#FFFFFF',
@@ -820,37 +677,34 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   markAllReadButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(42, 124, 199, 0.1)',
-    borderRadius: 16,
-  },
-  markAllReadText: {
-    fontSize: 12,
-    color: '#2A7CC7',
-    fontWeight: '600',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 20,
   },
   notificationsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: 4,
-    marginBottom: 16,
+    paddingVertical: 16,
+    paddingTop: 20,
+    backgroundColor: '#F8FAFC',
   },
   notificationCount: {
     color: '#64748B',
     fontWeight: '400',
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748B',
-    marginTop: 4,
+    marginTop: 2,
     fontWeight: '400',
   },
   notificationActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   testButton: {
     flexDirection: 'row',
@@ -887,7 +741,7 @@ const styles = StyleSheet.create({
   refreshButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
   },
   clearButton: {
     padding: 8,

@@ -5,13 +5,13 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   Image,
   Dimensions,
   RefreshControl,
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
+import OrderSkeleton from './OrderSkeleton';
 import { UserOrderService, Order, OrderItem } from '../services/userOrderService';
 
 const { width } = Dimensions.get('window');
@@ -226,20 +226,18 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
 
   const renderFooter = () => {
     if (!loadingMore) return null;
-    
+
     return (
       <View style={styles.footerContainer}>
-        <ActivityIndicator size="small" color="#2A7CC7" />
-        <Text style={styles.footerText}>Loading more orders...</Text>
+        <OrderSkeleton />
       </View>
     );
-  };
-
-  if (loading) {
+  };  if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2A7CC7" />
-        <Text style={styles.loadingText}>Loading your orders...</Text>
+        <OrderSkeleton />
+        <OrderSkeleton />
+        <OrderSkeleton />
       </View>
     );
   }
@@ -308,14 +306,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#64748B',
+    padding: 16,
+    paddingTop: 8,
   },
   errorContainer: {
     flex: 1,

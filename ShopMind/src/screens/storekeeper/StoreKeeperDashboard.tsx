@@ -69,7 +69,9 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
   const { 
     notifications, 
     isLoading,
-    unreadCount
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
   } = useNotifications(user.id, token);
 
   // Fetch revenue and order count data
@@ -328,17 +330,26 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
     }
   };
 
-  const handleActivityPress = (activity: Activity) => {
+  const handleActivityPress = async (activity: Activity) => {
     // Handle activity press based on type
     console.log('🎯 Activity pressed:', activity);
     
     // Mark as read if it's a new notification
     if (activity.isNew && activity.notificationId) {
-      setActivities(prev => 
-        prev.map(a => 
-          a.id === activity.id ? { ...a, isNew: false } : a
-        )
-      );
+      try {
+        // Mark as read in backend
+        await markAsRead(activity.notificationId);
+        console.log('✅ Notification marked as read:', activity.notificationId);
+        
+        // Update local state
+        setActivities(prev => 
+          prev.map(a => 
+            a.id === activity.id ? { ...a, isNew: false } : a
+          )
+        );
+      } catch (error) {
+        console.error('❌ Failed to mark notification as read:', error);
+      }
     }
 
     // Navigate based on activity type
@@ -721,6 +732,26 @@ const StoreKeeperDashboard: React.FC<StoreKeeperDashboardProps> = ({ user, token
                 <Ionicons name="time-outline" size={20} color="#047857" /> Recent Activities
               </Text>
               <View style={styles.headerActions}>
+                {unreadCount > 0 && (
+                  <TouchableOpacity 
+                    onPress={async () => {
+                      try {
+                        await markAllAsRead();
+                        // Update all activities to mark as read
+                        setActivities(prev => 
+                          prev.map(a => ({ ...a, isNew: false }))
+                        );
+                        console.log('✅ All notifications marked as read');
+                      } catch (error) {
+                        console.error('❌ Failed to mark all as read:', error);
+                      }
+                    }}
+                    style={styles.markAllReadButton}
+                  >
+                    <Ionicons name="checkmark-done" size={14} color="#047857" />
+                    <Text style={styles.markAllReadText}>Mark all read</Text>
+                  </TouchableOpacity>
+                )}
                 <View style={styles.liveIndicator}>
                   <View style={[styles.liveDot, { backgroundColor: isLoading ? '#F59E0B' : '#10B981' }]} />
                   <Text style={styles.liveText}>LIVE</Text>
@@ -1288,6 +1319,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  markAllReadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  markAllReadText: {
+    fontSize: 11,
+    color: '#047857',
+    fontWeight: '600',
+    marginLeft: 4,
   },
   demoButton: {
     backgroundColor: 'rgba(139, 92, 246, 0.1)',

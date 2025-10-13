@@ -26,8 +26,8 @@ export const API_CONFIG = {
   },
   NOTIFICATION_SERVICE: {
     PORT: '8087',
-    BASE_URL: 'http://34.136.119.127:8087',
-    WS_URL: 'http://34.136.119.127:8087/ws',
+    BASE_URL: 'https://shopmindnotification.app',
+    WS_URL: 'https://shopmindnotification.app/ws',
     HOSTED: true,
     // Alternative endpoints available:
     // WS_URL_SOCKJS: 'http://34.136.119.127:8087/notifications', // SockJS fallback

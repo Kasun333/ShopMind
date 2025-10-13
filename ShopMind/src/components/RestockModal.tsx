@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Image,
   ScrollView,
   Dimensions,
+  BackHandler,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +40,19 @@ const RestockModal: React.FC<RestockModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+
+  // Handle Android back button when scanner is open
+  useEffect(() => {
+    if (!showScanner) return;
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      console.log('Hardware back button pressed in scanner');
+      setShowScanner(false);
+      return true; // Prevent default back action
+    });
+
+    return () => backHandler.remove();
+  }, [showScanner]);
 
   // Request camera permission
   const requestCameraPermission = async () => {
@@ -314,22 +328,30 @@ const RestockModal: React.FC<RestockModalProps> = ({
         }}
       />
       
-      <View style={styles.scannerOverlay}>
-        <View style={styles.scannerHeader}>
+      <View style={styles.scannerOverlay} pointerEvents="box-none">
+        <View style={styles.scannerHeader} pointerEvents="auto">
           <Text style={styles.scannerTitle}>Scan Product Barcode</Text>
-          <TouchableOpacity onPress={() => setShowScanner(false)}>
-            <Ionicons name="close" size={24} color="white" />
+          <TouchableOpacity 
+            onPress={() => {
+              console.log('Close button pressed in scanner');
+              setShowScanner(false);
+            }}
+            style={styles.closeButton}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close" size={28} color="white" />
           </TouchableOpacity>
         </View>
         
-        <View style={styles.scannerFrame}>
+        <View style={styles.scannerFrame} pointerEvents="none">
           <View style={styles.cornerTL} />
           <View style={styles.cornerTR} />
           <View style={styles.cornerBL} />
           <View style={styles.cornerBR} />
         </View>
         
-        <Text style={styles.scannerInstruction}>
+        <Text style={styles.scannerInstruction} pointerEvents="none">
           Point your camera at the product barcode
         </Text>
       </View>
@@ -573,6 +595,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  closeButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scannerTitle: {
     fontSize: 18,

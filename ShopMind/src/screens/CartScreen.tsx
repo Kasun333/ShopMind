@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../hooks/useCart';
+import CartItemSkeleton from '../components/CartItemSkeleton';
 
 const { width } = Dimensions.get('window');
 
@@ -14,9 +17,10 @@ interface CartScreenProps {
   };
   token: string;
   onNavigateToCheckout?: () => void;
+  onNavigateToEcommerce?: () => void;
 }
 
-const CartScreen: React.FC<CartScreenProps> = ({ user, token, onNavigateToCheckout }) => {
+const CartScreen: React.FC<CartScreenProps> = ({ user, token, onNavigateToCheckout, onNavigateToEcommerce }) => {
   // Use the cart hook instead of hardcoded items
   const { 
     cartItems, 
@@ -44,21 +48,45 @@ const CartScreen: React.FC<CartScreenProps> = ({ user, token, onNavigateToChecko
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Shopping Cart</Text>
-        <Text style={styles.subtitle}>
-          {cartSummary.itemCount} {cartSummary.itemCount === 1 ? 'item' : 'items'} in your cart
-        </Text>
-      </View>
+      {/* Header with Gradient */}
+      <LinearGradient
+        colors={['#072033ff', '#2A7CC7', '#245e91ff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}
+      >
+        <View style={styles.header}>
+          <View style={styles.headerIcon}>
+            <MaterialCommunityIcons name="cart" size={28} color="#FFFFFF" />
+          </View>
+          <Text style={styles.title}>Shopping Cart</Text>
+          <Text style={styles.subtitle}>
+            {cartSummary.itemCount} {cartSummary.itemCount === 1 ? 'item' : 'items'} in your cart
+          </Text>
+        </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {cartItems.length === 0 ? (
           <View style={styles.emptyCart}>
-            <Text style={styles.emptyCartIcon}>🛒</Text>
+            <View style={styles.emptyCartIconContainer}>
+              <MaterialCommunityIcons name="cart-outline" size={80} color="#2A7CC7" />
+            </View>
             <Text style={styles.emptyCartTitle}>Your cart is empty</Text>
             <Text style={styles.emptyCartSubtitle}>Add some products to get started</Text>
-            <TouchableOpacity style={styles.shopNowButton}>
-              <Text style={styles.shopNowButtonText}>Start Shopping</Text>
+            <TouchableOpacity 
+              style={styles.shopNowButton}
+              onPress={onNavigateToEcommerce}
+            >
+              <LinearGradient
+                colors={['#2A7CC7', '#072033ff']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.shopNowGradient}
+              >
+                <MaterialCommunityIcons name="shopping" size={20} color="#FFFFFF" />
+                <Text style={styles.shopNowButtonText}>Start Shopping</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         ) : (
@@ -133,9 +161,18 @@ const CartScreen: React.FC<CartScreenProps> = ({ user, token, onNavigateToChecko
               style={styles.checkoutButton}
               onPress={onNavigateToCheckout}
             >
-              <Text style={styles.checkoutButtonText}>
-                Proceed to Checkout • ${cartSummary.total.toFixed(2)}
-              </Text>
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.checkoutGradient}
+              >
+                <MaterialCommunityIcons name="lock-check" size={22} color="#FFFFFF" />
+                <Text style={styles.checkoutButtonText}>
+                  Proceed to Checkout • ${cartSummary.total.toFixed(2)}
+                </Text>
+                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              </LinearGradient>
             </TouchableOpacity>
 
             {cartItems.length > 0 && (
@@ -143,7 +180,8 @@ const CartScreen: React.FC<CartScreenProps> = ({ user, token, onNavigateToChecko
                 style={styles.clearCartButton}
                 onPress={handleClearCart}
               >
-                <Text style={styles.clearCartButtonText}>🗑️ Clear Cart</Text>
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                <Text style={styles.clearCartButtonText}>Clear Cart</Text>
               </TouchableOpacity>
             )}
           </>
@@ -158,77 +196,92 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  headerGradient: {
+    paddingTop: 0,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
   header: {
-    padding: 20,
-    paddingTop: 60,
+    paddingTop: 50,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  headerIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: '800',
+    color: '#FFFFFF',
     marginBottom: 8,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#64748B',
-    fontWeight: '400',
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
   },
   content: {
     flex: 1,
     padding: 20,
+    marginTop: -20,
   },
   emptyCart: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
   },
-  emptyCartIcon: {
-    fontSize: 64,
-    marginBottom: 20,
+  emptyCartIconContainer: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(42, 124, 199, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   emptyCartTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#1F2937',
     marginBottom: 8,
   },
   emptyCartSubtitle: {
     fontSize: 16,
     color: '#64748B',
-    marginBottom: 24,
+    marginBottom: 32,
     textAlign: 'center',
   },
   shopNowButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 16,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    shadowColor: '#3B82F6',
+    borderRadius: 25,
+    shadowColor: '#2A7CC7',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
+  },
+  shopNowGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
   },
   shopNowButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   cartItems: {
     marginBottom: 24,
@@ -280,7 +333,7 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#3B82F6',
+    color: '#2A7CC7',
   },
   quantityControls: {
     flexDirection: 'row',
@@ -290,16 +343,16 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(42, 124, 199, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(42, 124, 199, 0.2)',
   },
   quantityButtonText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '700',
+    color: '#2A7CC7',
   },
   quantity: {
     fontSize: 16,
@@ -364,25 +417,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   checkoutButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 16,
-    padding: 18,
-    alignItems: 'center',
-    shadowColor: '#3B82F6',
+    borderRadius: 20,
+    marginBottom: 16,
+    shadowColor: '#10B981',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
-    marginBottom: 20,
+  },
+  checkoutGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 18,
+    borderRadius: 20,
   },
   checkoutButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
-    letterSpacing: 0.5,
   },
   itemImagePhoto: {
     width: '100%',
@@ -390,15 +447,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   clearCartButton: {
-    backgroundColor: '#EF4444',
-    borderRadius: 16,
-    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
   clearCartButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#EF4444',
+    fontSize: 15,
     fontWeight: '600',
   },
 });

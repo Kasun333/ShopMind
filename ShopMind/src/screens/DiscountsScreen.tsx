@@ -10,9 +10,12 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Discount, DiscountType } from '../types/Discount';
 import { discountService } from '../services/discountService';
 import DiscountDetailsModal from '../components/DiscountDetailsModal';
+import DiscountSkeleton from '../components/DiscountSkeleton';
 
 const { width } = Dimensions.get('window');
 
@@ -82,35 +85,57 @@ const DiscountsScreen: React.FC<DiscountsScreenProps> = ({ user, onBack, onApply
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
-          <View style={styles.discountBadge}>
+          <LinearGradient
+            colors={['#EF4444', '#DC2626']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.discountBadge}
+          >
             <Text style={styles.discountBadgeText}>{discountDisplay}</Text>
-          </View>
+          </LinearGradient>
           <View style={styles.discountTypeBadge}>
+            <MaterialCommunityIcons 
+              name={discount.type === DiscountType.BILL_DISCOUNT ? 'receipt-text' : 'tag'} 
+              size={14} 
+              color="#6366F1" 
+            />
             <Text style={styles.discountTypeText}>
-              {discount.type === DiscountType.BILL_DISCOUNT ? 'Bill Discount' : 'Product Discount'}
+              {discount.type === DiscountType.BILL_DISCOUNT ? 'Bill' : 'Product'}
             </Text>
           </View>
         </View>
         
         <Text style={styles.discountName}>{discount.discountName}</Text>
-        <Text style={styles.discountCode}>Code: {discount.discountCode}</Text>
+        <View style={styles.codeContainer}>
+          <MaterialCommunityIcons name="ticket-percent-outline" size={16} color="#6B7280" />
+          <Text style={styles.discountCode}>{discount.discountCode}</Text>
+        </View>
         <Text style={styles.discountDescription}>{discount.description}</Text>
         
         <View style={styles.discountDetails}>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Minimum Order:</Text>
+            <View style={styles.detailLabelContainer}>
+              <Ionicons name="cart-outline" size={16} color="#6B7280" />
+              <Text style={styles.detailLabel}>Min. Order</Text>
+            </View>
             <Text style={styles.detailValue}>${discount.minOrderAmount.toFixed(2)}</Text>
           </View>
           
           {discount.maxDiscountAmount > 0 && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Max Discount:</Text>
+              <View style={styles.detailLabelContainer}>
+                <Ionicons name="trending-up-outline" size={16} color="#6B7280" />
+                <Text style={styles.detailLabel}>Max Discount</Text>
+              </View>
               <Text style={styles.detailValue}>${discount.maxDiscountAmount.toFixed(2)}</Text>
             </View>
           )}
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Valid Until:</Text>
+            <View style={styles.detailLabelContainer}>
+              <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+              <Text style={styles.detailLabel}>Valid Until</Text>
+            </View>
             <Text style={styles.detailValue}>
               {new Date(discount.validTo).toLocaleDateString()}
             </Text>
@@ -134,20 +159,51 @@ const DiscountsScreen: React.FC<DiscountsScreenProps> = ({ user, onBack, onApply
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
-        <Text style={styles.loadingText}>Loading discounts...</Text>
+      <View style={styles.container}>
+        {/* Background Gradient */}
+        <LinearGradient
+          colors={['#072033ff', '#2A7CC7', '#245e91ff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.backgroundBox}
+        />
+        
+        {/* Header */}
+        <View style={styles.header}>
+          {onBack && (
+            <TouchableOpacity style={styles.backButton} onPress={onBack}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.title}>Available Discounts</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        {/* Loading Skeletons */}
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.skeletonContainer}>
+          <DiscountSkeleton />
+          <DiscountSkeleton />
+          <DiscountSkeleton />
+        </ScrollView>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#072033ff', '#2A7CC7', '#245e91ff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.backgroundBox}
+      />
+      
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backButtonText}>←</Text>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         )}
         <Text style={styles.title}>Available Discounts</Text>
@@ -156,7 +212,7 @@ const DiscountsScreen: React.FC<DiscountsScreenProps> = ({ user, onBack, onApply
 
       {/* Filter Tabs */}
       <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
           {filterButtons.map((filter) => (
             <TouchableOpacity
               key={filter.key}
@@ -188,7 +244,7 @@ const DiscountsScreen: React.FC<DiscountsScreenProps> = ({ user, onBack, onApply
       >
         {discounts.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🏷️</Text>
+            <MaterialCommunityIcons name="ticket-percent-outline" size={80} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No Discounts Available</Text>
             <Text style={styles.emptySubtitle}>
               {selectedType === 'ALL' 
@@ -209,8 +265,9 @@ const DiscountsScreen: React.FC<DiscountsScreenProps> = ({ user, onBack, onApply
 
       {/* Info Banner */}
       <View style={styles.infoBanner}>
+        <Ionicons name="information-circle" size={20} color="#6366F1" />
         <Text style={styles.infoBannerText}>
-          💡 Tap on any discount to view detailed information and applicable products
+          Tap on any discount to view details
         </Text>
       </View>
 
@@ -228,31 +285,24 @@ const DiscountsScreen: React.FC<DiscountsScreenProps> = ({ user, onBack, onApply
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8F9FA',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
+  backgroundBox: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 280,
+    zIndex: 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    paddingTop: 40,
+    paddingBottom: 16,
+    backgroundColor: 'transparent',
+    zIndex: 1,
   },
   backButton: {
     width: 40,
@@ -260,189 +310,254 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#333',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   title: {
     flex: 1,
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   headerSpacer: {
     width: 40,
   },
   filterContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: 'transparent',
+    paddingVertical: 12,
+    paddingLeft: 20,
+    zIndex: 1,
+  },
+  filterContent: {
+    paddingRight: 20,
   },
   filterButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingVertical: 10,
     marginRight: 10,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   activeFilterButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   filterButtonText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
   },
   activeFilterButtonText: {
-    color: '#fff',
+    color: '#6366F1',
+    fontWeight: '700',
   },
   scrollView: {
     flex: 1,
+    marginTop: -12,
+  },
+  skeletonContainer: {
+    padding: 20,
+    paddingTop: 24,
   },
   discountsContainer: {
     padding: 20,
+    paddingTop: 24,
   },
   discountsCount: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 15,
-    textAlign: 'center',
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+    fontWeight: '600',
   },
   discountCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 20,
-    marginBottom: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F1F3F5',
+    shadowColor: 'rgba(0, 0, 0, 0.08)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   expiredCard: {
     opacity: 0.6,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#F9FAFB',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 15,
+    alignItems: 'center',
+    marginBottom: 16,
   },
   discountBadge: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 20,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    shadowColor: 'rgba(239, 68, 68, 0.3)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  discountBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  discountTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  discountBadgeText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  discountTypeBadge: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 15,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
   discountTypeText: {
-    color: '#1976d2',
+    color: '#6366F1',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   discountName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+    letterSpacing: -0.3,
+  },
+  codeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
   },
   discountCode: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
     fontFamily: 'monospace',
   },
   discountDescription: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 15,
+    color: '#6B7280',
+    marginBottom: 16,
     lineHeight: 20,
   },
   discountDetails: {
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: 15,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 16,
+    gap: 10,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+  },
+  detailLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   detailLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#6B7280',
+    fontWeight: '500',
   },
   detailValue: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: '700',
+    color: '#1F2937',
   },
   expiredBanner: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: '#f44336',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    top: 16,
+    right: 16,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    shadowColor: 'rgba(239, 68, 68, 0.4)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
   expiredText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
     paddingHorizontal: 40,
   },
-  emptyIcon: {
-    fontSize: 60,
-    marginBottom: 20,
-  },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 20,
     marginBottom: 10,
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: '#9CA3AF',
     textAlign: 'center',
     lineHeight: 22,
+    paddingHorizontal: 20,
   },
   infoBanner: {
-    backgroundColor: '#fff3cd',
-    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    padding: 14,
     margin: 20,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#ffc107',
+    marginTop: 0,
+    borderRadius: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: '#6366F1',
   },
   infoBannerText: {
-    fontSize: 14,
-    color: '#856404',
-    textAlign: 'center',
+    flex: 1,
+    fontSize: 13,
+    color: '#4F46E5',
+    fontWeight: '600',
+  },
+  // Deprecated styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  emptyIcon: {
+    fontSize: 60,
+    marginBottom: 20,
   },
 });
 
