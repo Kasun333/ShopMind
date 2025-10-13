@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   StatusBar,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { Camera } from 'expo-camera';
 import { CameraView } from 'expo-camera';
@@ -54,6 +55,19 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
 
     getCameraPermissions();
   }, []);
+
+  // Handle Android back button when scanner is open
+  useEffect(() => {
+    if (!showBarcodeScanner) return;
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      console.log('Hardware back button pressed - closing scanner');
+      handleCancelScan();
+      return true; // Prevent default back action
+    });
+
+    return () => backHandler.remove();
+  }, [showBarcodeScanner]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
@@ -407,10 +421,14 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
           >
             <TouchableOpacity
               style={styles.cancelButton}
-              onPress={handleCancelScan}
-              activeOpacity={0.8}
+              onPress={() => {
+                console.log('Cancel button pressed');
+                handleCancelScan();
+              }}
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             >
-              <Ionicons name="close-outline" size={24} color="#FFFFFF" />
+              <Ionicons name="close-outline" size={28} color="#FFFFFF" />
             </TouchableOpacity>
             <Text style={styles.scannerTitle}>Scan Barcode</Text>
             <View style={styles.placeholder} />
@@ -430,13 +448,13 @@ const ProcessOrderScreen: React.FC<ProcessOrderScreenProps> = ({ user, token, or
                 style={styles.camera}
                 onBarcodeScanned={handleBarcodeScanned}
               />
-              <View style={styles.scannerOverlay}>
-                <View style={styles.scanFrame} />
-                <Text style={styles.scanInstructions}>
+              <View style={styles.scannerOverlay} pointerEvents="box-none">
+                <View style={styles.scanFrame} pointerEvents="none" />
+                <Text style={styles.scanInstructions} pointerEvents="none">
                   Position the barcode within the frame
                 </Text>
                 {scanError && (
-                  <View style={styles.errorContainer}>
+                  <View style={styles.errorContainer} pointerEvents="none">
                     <Text style={styles.errorText}>{scanError}</Text>
                   </View>
                 )}
@@ -658,14 +676,17 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight as number + 10,
     paddingHorizontal: 20,
     paddingBottom: 20,
+    zIndex: 9999,
+    elevation: 9999,
   },
   cancelButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 9999,
   },
   scannerTitle: {
     fontSize: 18,

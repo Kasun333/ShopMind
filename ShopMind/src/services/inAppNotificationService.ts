@@ -32,12 +32,54 @@ export class InAppNotificationService {
       // Preload notification sound
       await this.loadNotificationSound();
 
+      // Setup Android notification channel (required for Android 8.0+)
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+          sound: 'default',
+          enableVibrate: true,
+          showBadge: true,
+        });
+
+        // Create additional channels for different notification types
+        await Notifications.setNotificationChannelAsync('orders', {
+          name: 'Order Notifications',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          sound: 'default',
+          enableVibrate: true,
+          showBadge: true,
+        });
+
+        await Notifications.setNotificationChannelAsync('alerts', {
+          name: 'Important Alerts',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 500, 250, 500],
+          sound: 'default',
+          enableVibrate: true,
+          showBadge: true,
+        });
+
+        console.log('📱 Android notification channels configured');
+      }
+
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       
       if (existingStatus !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
+      }
+      
+      if (finalStatus !== 'granted') {
+        Alert.alert(
+          'Notifications Disabled',
+          'Please enable notifications in your device settings to receive important updates.',
+          [{ text: 'OK' }]
+        );
       }
       
       console.log('📱 Notification permissions:', finalStatus);
@@ -74,6 +116,10 @@ export class InAppNotificationService {
           data,
           sound: true,
           priority: Notifications.AndroidNotificationPriority.HIGH,
+          ...(Platform.OS === 'android' && {
+            channelId: data?.type === 'alert' ? 'alerts' : 
+                       data?.type?.includes('order') ? 'orders' : 'default',
+          }),
         },
         trigger: null, // Show immediately
       });

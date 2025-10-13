@@ -7,6 +7,7 @@ import DriverScreen from './src/screens/DriverScreen';
 import EcommerceScreen from './src/screens/EcommerceScreen';
 import StoreKeeperScreen from './src/screens/StoreKeeperScreen';
 import ToastComponent from './src/components/ToastComponent';
+import InAppNotificationService from './src/services/inAppNotificationService';
 import { User } from './src/types/User';
 import { initializeStripe } from './src/services/stripeService';
 
@@ -17,7 +18,9 @@ export default function App() {
   const [token, setToken] = useState<string | null>(null);
   const [showSignup, setShowSignup] = useState(false);
   const [stripeInitialized, setStripeInitialized] = useState(false);
+  const [notificationsInitialized, setNotificationsInitialized] = useState(false);
 
+  // Initialize Stripe
   useEffect(() => {
     const initStripe = async () => {
       const initialized = await initializeStripe();
@@ -27,6 +30,26 @@ export default function App() {
       }
     };
     initStripe();
+  }, []);
+
+  // Initialize Notifications
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        console.log('🔔 Initializing notification system...');
+        const hasPermissions = await InAppNotificationService.initialize();
+        setNotificationsInitialized(true);
+        if (hasPermissions) {
+          console.log('✅ Notifications initialized successfully');
+        } else {
+          console.warn('⚠️ Notification permissions not granted');
+        }
+      } catch (error) {
+        console.error('❌ Failed to initialize notifications:', error);
+        setNotificationsInitialized(true); // Continue app even if notifications fail
+      }
+    };
+    initNotifications();
   }, []);
 
   const handleLogin = (userData: User, userToken: string) => {
