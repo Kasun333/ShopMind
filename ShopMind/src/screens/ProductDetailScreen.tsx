@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  ActivityIndicator,
   Alert,
   Animated,
   Image,
@@ -14,10 +13,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ECOMMERCE_API_URL } from '../config/apiConfig';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Product } from '../types/Product';
 import { User } from '../types/User';
 import { useCart } from '../hooks/useCart';
+import ProductDetailSkeleton from '../components/ProductDetailSkeleton';
 
 const { width, height } = Dimensions.get('window');
 
@@ -233,11 +233,20 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="light-content" />
         <LinearGradient
-          colors={['#1E6091', '#2A7CC7', '#3B95E3']}
-          style={styles.loadingBackground}
-        />
-        <ActivityIndicator size="large" color="#FFFFFF" />
-        <Text style={styles.loadingText}>Loading product details...</Text>
+          colors={['#072033ff', '#2A7CC7', '#245e91ff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.loadingHeaderGradient}
+        >
+          <View style={styles.loadingHeader}>
+            <TouchableOpacity style={styles.backButton} onPress={onBack}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.loadingHeaderTitle}>Product Details</Text>
+            <View style={styles.placeholder} />
+          </View>
+        </LinearGradient>
+        <ProductDetailSkeleton />
       </View>
     );
   }
@@ -248,17 +257,25 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       <View style={styles.errorContainer}>
         <StatusBar barStyle="light-content" />
         <LinearGradient
-          colors={['#1E6091', '#2A7CC7', '#3B95E3']}
+          colors={['#072033ff', '#2A7CC7', '#245e91ff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={styles.errorBackground}
         />
         <View style={styles.errorContent}>
-          <Ionicons name="alert-circle-outline" size={64} color="#FFFFFF" />
+          <View style={styles.errorIconContainer}>
+            <MaterialCommunityIcons name="package-variant-closed-remove" size={80} color="#FFFFFF" />
+          </View>
           <Text style={styles.errorTitle}>Product not found</Text>
           <Text style={styles.errorSubtitle}>The product you're looking for doesn't exist.</Text>
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backButtonText}>
-              <Ionicons name="arrow-back" size={16} /> Go Back
-            </Text>
+          <TouchableOpacity style={styles.errorBackButton} onPress={onBack}>
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0.2)', 'rgba(255, 255, 255, 0.1)']}
+              style={styles.errorBackGradient}
+            >
+              <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -280,13 +297,13 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       
       {/* Header */}
       <LinearGradient
-        colors={['#1E6091', '#2A7CC7']}
+        colors={['#072033ff', '#2A7CC7', '#245e91ff']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
         <TouchableOpacity style={styles.backIcon} onPress={onBack}>
-          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
         <View style={styles.cartBadgeContainer}>
@@ -295,7 +312,7 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               <Text style={styles.cartBadgeText}>{getCartItemCount()}</Text>
             </View>
           )}
-          <Ionicons name="cart-outline" size={22} color="#FFFFFF" />
+          <MaterialCommunityIcons name="cart-outline" size={24} color="#FFFFFF" />
         </View>
       </LinearGradient>
 
@@ -337,28 +354,29 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {/* Quick Info Cards */}
           <View style={styles.quickInfoContainer}>
             <View style={styles.quickInfoCard}>
-              <Ionicons name="pricetag-outline" size={22} color="#2A7CC7" />
+              <MaterialCommunityIcons name="barcode" size={24} color="#2A7CC7" />
               <Text style={styles.quickInfoLabel}>Product ID</Text>
               <Text style={styles.quickInfoValue}>#{product.productId}</Text>
             </View>
             <View style={styles.quickInfoCard}>
-              <Ionicons name="cube-outline" size={22} color={product.stock === 0 ? "#DC2626" : "#16A34A"} />
+              <MaterialCommunityIcons name="package-variant" size={24} color={product.stock === 0 ? "#EF4444" : "#10B981"} />
               <Text style={styles.quickInfoLabel}>Stock</Text>
               <Text style={[styles.quickInfoValue, product.stock === 0 ? styles.stockEmpty : styles.stockAvailable]}>
                 {product.stock === 0 ? 'Out' : product.stock}
               </Text>
             </View>
             <View style={styles.quickInfoCard}>
-              <Ionicons name="folder-outline" size={22} color="#2A7CC7" />
+              <MaterialCommunityIcons name="shape" size={24} color="#2A7CC7" />
               <Text style={styles.quickInfoLabel}>Category</Text>
               <Text style={styles.quickInfoValue}>#{product.categoryId}</Text>
             </View>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              <Ionicons name="document-text-outline" size={18} color="#2A7CC7" /> Description
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcons name="text-box" size={22} color="#2A7CC7" />
+              <Text style={styles.sectionTitle}>Description</Text>
+            </View>
             <View style={styles.descriptionCard}>
               <Text style={styles.productDescription}>
                 {product.description || 'No description available for this product.'}
@@ -367,20 +385,23 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              <Ionicons name="list-outline" size={18} color="#2A7CC7" /> Product Details
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcons name="format-list-bulleted" size={22} color="#2A7CC7" />
+              <Text style={styles.sectionTitle}>Product Details</Text>
+            </View>
             <View style={styles.detailsCard}>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>
-                  <Ionicons name="key-outline" size={16} color="#6B7280" /> Product ID:
-                </Text>
+                <View style={styles.detailLabelContainer}>
+                  <MaterialCommunityIcons name="identifier" size={18} color="#64748B" />
+                  <Text style={styles.detailLabel}>Product ID:</Text>
+                </View>
                 <Text style={styles.detailValue}>{product.productId}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>
-                  <Ionicons name="folder-outline" size={16} color="#6B7280" /> Category ID:
-                </Text>
+                <View style={styles.detailLabelContainer}>
+                  <MaterialCommunityIcons name="shape-outline" size={18} color="#64748B" />
+                  <Text style={styles.detailLabel}>Category ID:</Text>
+                </View>
                 <Text style={styles.detailValue}>{product.categoryId}</Text>
               </View>
               <View style={styles.detailRow}>
@@ -502,26 +523,37 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  loadingHeaderGradient: {
+    paddingTop: 0,
+    paddingBottom: 16,
+  },
+  loadingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+  },
+  loadingHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  placeholder: {
+    width: 40,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  loadingText: {
-    marginTop: 20,
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   errorBackground: {
     position: 'absolute',
@@ -531,22 +563,49 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   errorContent: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
+  errorIconContainer: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   errorTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: '#FFFFFF',
-    marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
   },
   errorSubtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     marginBottom: 32,
+    lineHeight: 22,
+  },
+  errorBackButton: {
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  errorBackGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -735,13 +794,16 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 12,
+  sectionTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
   },
   descriptionCard: {
     backgroundColor: '#FFFFFF',
@@ -782,23 +844,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
+  detailLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   detailLabel: {
     fontSize: 14,
     color: '#64748B',
     fontWeight: '500',
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   detailValue: {
     fontSize: 14,
-    color: '#1E293B',
+    color: '#1F2937',
     fontWeight: '600',
   },
   stockEmpty: {
-    color: '#DC2626',
+    color: '#EF4444',
   },
   stockAvailable: {
-    color: '#16A34A',
+    color: '#10B981',
   },
   quantityCard: {
     backgroundColor: '#FFFFFF',
@@ -939,27 +1004,5 @@ const styles = StyleSheet.create({
   },
   addToCartButtonDisabled: {
     opacity: 0.8,
-  },
-  backButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  backButtonText: {
-    color: '#1E6091',
-    fontSize: 16,
-    fontWeight: '600',
-    flexDirection: 'row',
-    alignItems: 'center',
   },
 });

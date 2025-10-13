@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    paddingBottom: 20, // Space for phone navigation
+    paddingBottom: 28, // Space for phone navigation - increased for lower position
     paddingTop: 12,
     shadowColor: '#0F172A',
     shadowOffset: {

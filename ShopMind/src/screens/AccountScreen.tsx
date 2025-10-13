@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { User } from '../types/User';
 
 const { width } = Dimensions.get('window');
@@ -14,28 +14,31 @@ interface AccountScreenProps {
 
 const AccountScreen: React.FC<AccountScreenProps> = ({ user, token, onLogout }) => {
   const accountOptions = [
-    { id: '1', icon: 'person-outline', title: 'Profile Information', subtitle: 'Edit your personal details', hasArrow: true },
-    { id: '2', icon: 'location-outline', title: 'Addresses', subtitle: 'Manage delivery addresses', hasArrow: true },
-    { id: '3', icon: 'card-outline', title: 'Payment Methods', subtitle: 'Cards and payment options', hasArrow: true },
-    { id: '4', icon: 'cube-outline', title: 'Order History', subtitle: 'View past orders', hasArrow: true },
+    { id: '1', icon: 'account-edit', title: 'Profile Information', subtitle: 'Edit your personal details', hasArrow: true },
+    { id: '2', icon: 'map-marker-multiple', title: 'Addresses', subtitle: 'Manage delivery addresses', hasArrow: true },
+    { id: '3', icon: 'credit-card-outline', title: 'Payment Methods', subtitle: 'Cards and payment options', hasArrow: true },
+    { id: '4', icon: 'package-variant', title: 'Order History', subtitle: 'View past orders', hasArrow: true },
     { id: '5', icon: 'heart-outline', title: 'Wishlist', subtitle: 'Your saved items', hasArrow: true },
-    { id: '6', icon: 'notifications-outline', title: 'Notifications', subtitle: 'Manage your preferences', hasArrow: true },
-    { id: '7', icon: 'shield-outline', title: 'Privacy & Security', subtitle: 'Account security settings', hasArrow: true },
-    { id: '8', icon: 'help-circle-outline', title: 'Help & Support', subtitle: 'Get help and contact us', hasArrow: true },
-    { id: '9', icon: 'document-text-outline', title: 'Terms & Conditions', subtitle: 'App terms and policies', hasArrow: true },
+    { id: '6', icon: 'bell-ring', title: 'Notifications', subtitle: 'Manage your preferences', hasArrow: true },
+    { id: '7', icon: 'shield-lock', title: 'Privacy & Security', subtitle: 'Account security settings', hasArrow: true },
+    { id: '8', icon: 'help-circle', title: 'Help & Support', subtitle: 'Get help and contact us', hasArrow: true },
+    { id: '9', icon: 'file-document-outline', title: 'Terms & Conditions', subtitle: 'App terms and policies', hasArrow: true },
   ];
 
   return (
     <View style={styles.container}>
       {/* Header with Gradient */}
       <LinearGradient
-        colors={['#1E6091', '#2A7CC7', '#3B95E3']}
+        colors={['#072033ff', '#2A7CC7', '#245e91ff']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Account</Text>
+          <View style={styles.headerIcon}>
+            <MaterialCommunityIcons name="account-circle" size={32} color="#FFFFFF" />
+          </View>
+          <Text style={styles.title}>My Account</Text>
           <Text style={styles.subtitle}>Manage your profile and preferences</Text>
         </View>
       </LinearGradient>
@@ -82,45 +85,57 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ user, token, onLogout }) 
         {/* User Details Cards */}
         <View style={styles.detailsContainer}>
           <View style={styles.detailCard}>
-            <Text style={styles.detailLabel}>
-              <Ionicons name="location-outline" size={16} color="#2A7CC7" /> Address
-            </Text>
-            <Text style={styles.detailValue}>{user.formattedAddress}</Text>
+            <View style={styles.detailIconWrapper}>
+              <MaterialCommunityIcons name="map-marker" size={20} color="#2A7CC7" />
+            </View>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Address</Text>
+              <Text style={styles.detailValue}>{user.formattedAddress}</Text>
+            </View>
           </View>
 
           <View style={styles.detailCard}>
-            <Text style={styles.detailLabel}>
-              <Ionicons name="calendar-outline" size={16} color="#2A7CC7" /> Date of Birth
-            </Text>
-            <Text style={styles.detailValue}>
-              {new Date(user.dateOfBirth).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </Text>
+            <View style={styles.detailIconWrapper}>
+              <MaterialCommunityIcons name="calendar-heart" size={20} color="#2A7CC7" />
+            </View>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Date of Birth</Text>
+              <Text style={styles.detailValue}>
+                {new Date(user.dateOfBirth).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.detailCard}>
-            <Text style={styles.detailLabel}>
-              <Ionicons name="time-outline" size={16} color="#2A7CC7" /> Member Since
-            </Text>
-            <Text style={styles.detailValue}>
-              {new Date(user.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </Text>
+            <View style={styles.detailIconWrapper}>
+              <MaterialCommunityIcons name="clock-outline" size={20} color="#2A7CC7" />
+            </View>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Member Since</Text>
+              <Text style={styles.detailValue}>
+                {new Date(user.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.detailCard}>
-            <Text style={styles.detailLabel}>
-              <Ionicons name="navigate-outline" size={16} color="#2A7CC7" /> Location
-            </Text>
-            <Text style={styles.detailValue}>
-              {user.latitude.toFixed(4)}, {user.longitude.toFixed(4)}
-            </Text>
+            <View style={styles.detailIconWrapper}>
+              <MaterialCommunityIcons name="crosshairs-gps" size={20} color="#2A7CC7" />
+            </View>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Location</Text>
+              <Text style={styles.detailValue}>
+                {user.latitude.toFixed(4)}, {user.longitude.toFixed(4)}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -129,14 +144,14 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ user, token, onLogout }) 
           {accountOptions.map((option) => (
             <TouchableOpacity key={option.id} style={styles.optionItem} activeOpacity={0.7}>
               <View style={styles.optionIcon}>
-                <Ionicons name={option.icon as any} size={22} color="#2A7CC7" />
+                <MaterialCommunityIcons name={option.icon as any} size={24} color="#2A7CC7" />
               </View>
               <View style={styles.optionContent}>
                 <Text style={styles.optionTitle}>{option.title}</Text>
                 <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
               </View>
               {option.hasArrow && (
-                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
               )}
             </TouchableOpacity>
           ))}
@@ -174,25 +189,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   headerGradient: {
-    paddingTop: 50,
+    paddingTop: 0,
     paddingBottom: 30,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
   },
   header: {
+    paddingTop: 50,
     paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  headerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 4,
-    letterSpacing: -1,
+    marginBottom: 6,
+    letterSpacing: -0.8,
   },
   subtitle: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
   },
   content: {
     flex: 1,
@@ -319,30 +345,42 @@ const styles = StyleSheet.create({
   },
   detailCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    marginBottom: 8,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(42, 124, 199, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  detailContent: {
+    flex: 1,
   },
   detailLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#2A7CC7',
-    marginBottom: 6,
-    letterSpacing: -0.1,
+    color: '#64748B',
+    marginBottom: 4,
+    fontWeight: '500',
   },
   detailValue: {
     fontSize: 15,
     color: '#1F2937',
-    fontWeight: '500',
+    fontWeight: '600',
     lineHeight: 20,
   },
   optionsContainer: {

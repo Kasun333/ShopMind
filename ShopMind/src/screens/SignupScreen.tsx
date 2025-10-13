@@ -10,7 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 // @ts-ignore
 import { EMAIL_VERIFIER_API_KEY } from '@env';
 import LocationPickerModal from '../components/LocationPickerModal';
@@ -263,13 +264,13 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     label: string,
     field: keyof FormDataType,
     placeholder: string,
-    iconName: keyof typeof Ionicons.glyphMap,
+    iconName: keyof typeof MaterialCommunityIcons.glyphMap,
     keyboardType: any = 'default'
   ) => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>{label}</Text>
       <View style={styles.inputWrapper}>
-        <Ionicons name={iconName} size={20} color="#3B82F6" style={styles.inputIcon} />
+        <MaterialCommunityIcons name={iconName} size={20} color="#2A7CC7" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
           placeholder={placeholder}
@@ -297,7 +298,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>{label}</Text>
       <View style={styles.inputWrapper}>
-        <Ionicons name="lock-closed" size={20} color="#3B82F6" style={styles.inputIcon} />
+        <MaterialCommunityIcons name="lock" size={20} color="#2A7CC7" style={styles.inputIcon} />
         <TextInput
           style={styles.passwordInput}
           placeholder={placeholder}
@@ -314,7 +315,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
           style={styles.eyeButton}
           onPress={toggleVisibility}
         >
-          <Ionicons 
+          <MaterialCommunityIcons 
             name={isVisible ? 'eye-off' : 'eye'} 
             size={20} 
             color="#6B7280" 
@@ -329,7 +330,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       <Text style={styles.inputLabel}>Email</Text>
       <View style={styles.emailRow}>
         <View style={[styles.inputWrapper, styles.emailInputWrapper, isEmailVerified && styles.inputWrapperVerified]}>
-          <Ionicons name="mail" size={20} color={isEmailVerified ? "#10B981" : "#3B82F6"} style={styles.inputIcon} />
+          <MaterialCommunityIcons name="email" size={20} color={isEmailVerified ? "#10B981" : "#2A7CC7"} style={styles.inputIcon} />
           <TextInput
             style={styles.emailInput}
             placeholder="Enter your email address"
@@ -350,9 +351,9 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
           disabled={isVerifyingEmail || isEmailVerified || !formData.email.trim()}
         >
           {isVerifyingEmail ? (
-            <Ionicons name="refresh" size={18} color="#FFFFFF" />
+            <MaterialCommunityIcons name="refresh" size={18} color="#FFFFFF" />
           ) : isEmailVerified ? (
-            <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+            <MaterialCommunityIcons name="check-circle" size={18} color="#FFFFFF" />
           ) : (
             <Text style={styles.verifyButtonText}>Verify</Text>
           )}
@@ -360,7 +361,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       </View>
       {isEmailVerified && (
         <View style={styles.verifiedContainer}>
-          <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+          <MaterialCommunityIcons name="check-circle" size={16} color="#10B981" />
           <Text style={styles.verifiedText}>Email verified successfully!</Text>
         </View>
       )}
@@ -372,7 +373,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       <Text style={styles.inputLabel}>Address</Text>
       <View style={styles.addressRow}>
         <View style={styles.inputWrapper}>
-          <Ionicons name="location" size={20} color="#3B82F6" style={styles.inputIcon} />
+          <MaterialCommunityIcons name="map-marker" size={20} color="#2A7CC7" style={styles.inputIcon} />
           <TextInput
             style={styles.addressInput}
             placeholder="Enter your address or select on map"
@@ -390,7 +391,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
           style={styles.mapButton}
           onPress={() => setShowLocationModal(true)}
         >
-          <Ionicons name="map" size={20} color="#FFFFFF" />
+          <MaterialCommunityIcons name="map" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </View>
@@ -401,21 +402,29 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <LinearGradient
+        colors={['#072033ff', '#2A7CC7', '#245e91ff']}
+        style={styles.headerGradient}
+      >
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <MaterialCommunityIcons name="account-plus" size={48} color="#FFFFFF" />
+          </View>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Fill in your details to get started</Text>
+        </View>
+      </LinearGradient>
+
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Fill in your details to get started</Text>
-        </View>
-
         <View style={styles.form}>
-          {renderInput('Full Name', 'fullName', 'Enter your full name', 'person')}
+          {renderInput('Full Name', 'fullName', 'Enter your full name', 'account')}
           {renderInput('Username', 'username', 'Choose a username', 'at')}
           {renderEmailInput()}
-          {renderInput('Phone Number', 'phoneNumber', '+1234567890', 'call', 'phone-pad')}
+          {renderInput('Phone Number', 'phoneNumber', '+1234567890', 'phone', 'phone-pad')}
           {renderPasswordInput('Password', 'password', 'Create a secure password', showPassword, () => setShowPassword(!showPassword))}
           {renderPasswordInput('Confirm Password', 'confirmPassword', 'Confirm your password', showConfirmPassword, () => setShowConfirmPassword(!showConfirmPassword))}
           {renderAddressInput()}
@@ -433,23 +442,29 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
             
             <View style={styles.locationFields}>
               <View style={styles.halfWidth}>
-                {renderInput('Latitude', 'latitude', 'Auto-filled from map', 'navigate')}
+                {renderInput('Latitude', 'latitude', 'Auto-filled from map', 'latitude')}
               </View>
               <View style={styles.halfWidth}>
-                {renderInput('Longitude', 'longitude', 'Auto-filled from map', 'navigate')}
+                {renderInput('Longitude', 'longitude', 'Auto-filled from map', 'longitude')}
               </View>
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={[styles.signupButton, (isLoading || !isEmailVerified) && styles.buttonDisabled]} 
-            onPress={handleSignup}
-            disabled={isLoading || !isEmailVerified}
+          <LinearGradient
+            colors={['#10B981', '#059669']}
+            style={styles.signupButton}
           >
-            <Text style={styles.signupButtonText}>
-              {isLoading ? 'Creating Account...' : 'Create Account'}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.signupButtonInner, (isLoading || !isEmailVerified) && styles.buttonDisabled]} 
+              onPress={handleSignup}
+              disabled={isLoading || !isEmailVerified}
+            >
+              <MaterialCommunityIcons name="account-check" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.signupButtonText}>
+                {isLoading ? 'Creating Account...' : 'Create Account'}
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
 
           <TouchableOpacity style={styles.backToLogin} onPress={onBackToLogin}>
             <Text style={styles.backToLoginText}>
@@ -476,28 +491,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  headerGradient: {
+    paddingTop: 0,
+  },
+  header: {
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingBottom: 30,
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '400',
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-    marginTop: 60,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748B',
-    fontWeight: '400',
   },
   form: {
     gap: 20,
@@ -562,12 +589,12 @@ const styles = StyleSheet.create({
   verifyButton: {
     height: 52,
     paddingHorizontal: 20,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#2A7CC7',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 90,
-    shadowColor: '#3B82F6',
+    shadowColor: '#2A7CC7',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -626,11 +653,11 @@ const styles = StyleSheet.create({
   mapButton: {
     height: 52,
     width: 52,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#2A7CC7',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: '#2A7CC7',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -661,12 +688,9 @@ const styles = StyleSheet.create({
   },
   signupButton: {
     height: 56,
-    backgroundColor: '#3B82F6',
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginTop: 32,
-    shadowColor: '#3B82F6',
+    shadowColor: '#10B981',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -675,10 +699,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  signupButtonInner: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   buttonDisabled: {
-    backgroundColor: '#9CA3AF',
-    shadowColor: '#9CA3AF',
-    shadowOpacity: 0.1,
+    opacity: 0.5,
   },
   signupButtonText: {
     color: '#FFFFFF',
@@ -697,7 +725,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   loginLink: {
-    color: '#3B82F6',
+    color: '#2A7CC7',
     fontWeight: '600',
   },
 });

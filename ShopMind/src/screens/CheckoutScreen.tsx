@@ -6,16 +6,18 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  ActivityIndicator,
   Image,
   TextInput,
   Modal,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CardField, useStripe } from '@stripe/stripe-react-native';
 import { useCart } from '../hooks/useCart';
 import { User } from '../types/User';
 import { stripeService, CreatePaymentIntentRequest } from '../services/stripeService';
 import { Discount } from '../types/Discount';
+import CartItemSkeleton from '../components/CartItemSkeleton';
 
 interface CheckoutScreenProps {
   user: User;
@@ -235,14 +237,24 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backIcon} onPress={onBack}>
-          <Text style={styles.backIconText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={styles.placeholder} />
-      </View>
+      {/* Header with Gradient */}
+      <LinearGradient
+        colors={['#072033ff', '#2A7CC7', '#245e91ff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backIcon} onPress={onBack}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <MaterialCommunityIcons name="lock-check" size={24} color="#FFFFFF" />
+            <Text style={styles.headerTitle}>Secure Checkout</Text>
+          </View>
+          <View style={styles.placeholder} />
+        </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Order Summary */}
@@ -390,16 +402,23 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           onPress={handlePayment}
           disabled={!cardFieldComplete || isProcessing}
         >
-          {isProcessing ? (
-            <View style={styles.processingContainer}>
-              <ActivityIndicator color="#FFFFFF" size="small" />
-              <Text style={styles.processingText}>Processing Payment...</Text>
-            </View>
-          ) : (
-            <Text style={styles.payButtonText}>
-              Pay ${(appliedDiscountInfo.discount ? cartSummaryWithDiscount.total : cartSummary.total).toFixed(2)}
-            </Text>
-          )}
+          <LinearGradient
+            colors={['#10B981', '#059669']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.payButtonGradient}
+          >
+            {isProcessing ? (
+              <View style={styles.processingContainer}>
+                <MaterialCommunityIcons name="lock-clock" size={20} color="#FFFFFF" />
+                <Text style={styles.processingText}>Processing Payment...</Text>
+              </View>
+            ) : (
+              <Text style={styles.payButtonText}>
+                Pay ${(appliedDiscountInfo.discount ? cartSummaryWithDiscount.total : cartSummary.total).toFixed(2)}
+              </Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -438,7 +457,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 disabled={isApplyingDiscount}
               >
                 {isApplyingDiscount ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.applyCodeButtonText}>Applying...</Text>
                 ) : (
                   <Text style={styles.applyCodeButtonText}>Apply Code</Text>
                 )}
@@ -488,34 +507,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  headerGradient: {
+    paddingTop: 0,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
   backIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backIconText: {
-    fontSize: 20,
-    color: '#374151',
-    fontWeight: '600',
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
   },
   placeholder: {
     width: 40,
@@ -523,14 +546,15 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    marginTop: -20,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '700',
+    color: '#1F2937',
     marginBottom: 12,
   },
   orderSummaryCard: {
@@ -675,18 +699,20 @@ const styles = StyleSheet.create({
     borderTopColor: '#E2E8F0',
   },
   payButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-    shadowColor: '#3B82F6',
+    borderRadius: 20,
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
+    overflow: 'hidden',
   },
   payButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    opacity: 0.5,
+  },
+  payButtonGradient: {
+    paddingVertical: 18,
+    alignItems: 'center',
   },
   payButtonText: {
     color: '#FFFFFF',
@@ -696,6 +722,7 @@ const styles = StyleSheet.create({
   processingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
   processingText: {
     color: '#FFFFFF',
@@ -787,16 +814,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   discountButton: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
+    backgroundColor: 'rgba(42, 124, 199, 0.1)',
+    borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 124, 199, 0.2)',
   },
   discountButtonText: {
-    color: '#3B82F6',
+    color: '#2A7CC7',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   availableDiscountsText: {
     fontSize: 12,

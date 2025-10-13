@@ -35,9 +35,9 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
   const { addToCart: addToCartService, getCartItemCount } = useCart();
 
   const categories: Category[] = [
-    { id: 1, name: 'Electronics', icon: '📱' },
+    { id: 1, name: 'Electronics', icon: '�' },
     { id: 2, name: 'Clothing', icon: '👕' },
-    { id: 3, name: 'Home & Garden', icon: '🏠' },
+    { id: 3, name: 'Home & Garden', icon: '�' },
     { id: 4, name: 'Sports', icon: '⚽' },
     { id: 5, name: 'Books', icon: '📚' },
     { id: 6, name: 'Food', icon: '🍔' },
@@ -235,16 +235,23 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
         style={styles.backgroundBox}
       />
       
-      <View style={styles.header}>
-        <Text style={styles.title}>ShopMind</Text>
-        <Text style={styles.subtitle}>Hello, {user.fullName}</Text>
-      </View>
+      {/* Fixed Header Section */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>ShopMind</Text>
+            <Text style={styles.subtitle}>Hello, {user.fullName} 👋</Text>
+          </View>
+          <TouchableOpacity style={styles.notificationButton}>
+            <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Ionicons name="search-outline" size={18} color="rgba(255, 255, 255, 0.9)" />
             <TextInput
               style={styles.searchInput}
               placeholder="Search products..."
@@ -255,30 +262,43 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
               autoCorrect={false}
               spellCheck={false}
             />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color="rgba(255, 255, 255, 0.7)" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
+        {/* Enhanced Discount Banner */}
+        <View style={styles.discountBannerContainer}>
           <TouchableOpacity 
-            style={styles.discountsCard}
+            style={styles.discountBanner}
             onPress={() => setCurrentScreen('discounts')}
+            activeOpacity={0.85}
           >
-            <View style={styles.discountsCardContent}>
-              <Text style={styles.discountsIcon}>🏷️</Text>
-              <View style={styles.discountsInfo}>
-                <Text style={styles.discountsTitle}>View Discounts</Text>
-                <Text style={styles.discountsSubtitle}>Discover amazing deals & offers</Text>
+            <View style={styles.discountGradient}>
+              <View style={styles.discountIconContainer}>
+                <MaterialCommunityIcons name="ticket-percent" size={22} color="#EF4444" />
               </View>
-              <Text style={styles.discountsArrow}>→</Text>
+              <View style={styles.discountContent}>
+                <Text style={styles.discountTitle}>Special Offers 🎉</Text>
+                <Text style={styles.discountSubtitle}>Grab exclusive deals today!</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#6B7280" />
             </View>
           </TouchableOpacity>
         </View>
 
         {/* Categories */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categories</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
+        <View style={styles.categoriesSection}>
+          <Text style={styles.categoriesSectionTitle}>Categories</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.categoriesContainer}
+            contentContainerStyle={styles.categoriesContent}
+          >
             <TouchableOpacity 
               style={[styles.categoryCard, selectedCategory === null && styles.categoryCardActive]}
               onPress={() => {
@@ -286,7 +306,9 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
                 fetchProducts();
               }}
             >
-              <Text style={styles.categoryIcon}>🏷️</Text>
+              <View style={[styles.categoryIconContainer, selectedCategory === null && styles.categoryIconContainerActive]}>
+                <Ionicons name="apps" size={17} color={selectedCategory === null ? '#FFFFFF' : '#6366F1'} />
+              </View>
               <Text style={[styles.categoryName, selectedCategory === null && styles.categoryNameActive]}>All</Text>
             </TouchableOpacity>
             {categories.map((category) => (
@@ -295,7 +317,9 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
                 style={[styles.categoryCard, selectedCategory === category.id && styles.categoryCardActive]}
                 onPress={() => handleCategoryPress(category.id)}
               >
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
+                <View style={[styles.categoryIconContainer, selectedCategory === category.id && styles.categoryIconContainerActive]}>
+                  <Text style={styles.categoryEmoji}>{category.icon}</Text>
+                </View>
                 <Text style={[styles.categoryName, selectedCategory === category.id && styles.categoryNameActive]}>
                   {category.name}
                 </Text>
@@ -303,51 +327,64 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
             ))}
           </ScrollView>
         </View>
+      </View>
 
-        {/* Products Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {selectedCategory ? `${categories.find(c => c.id === selectedCategory)?.name} Products` : 'All Products'}
-            </Text>
-            <Text style={styles.productCount}>({filteredProducts.length} items)</Text>
+      {/* Scrollable Products Section */}
+      <View style={styles.productsSection}>
+        <View style={styles.productsSectionHeader}>
+          <Text style={styles.productsSectionTitle}>
+            {selectedCategory ? `${categories.find(c => c.id === selectedCategory)?.name}` : 'All Products'}
+          </Text>
+          <View style={styles.productCount}>
+            <Feather name="box" size={14} color="#6366F1" />
+            <Text style={styles.productCountText}>{filteredProducts.length}</Text>
           </View>
-          
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#6366F1" />
-              <Text style={styles.loadingText}>Loading products...</Text>
-            </View>
-          ) : filteredProducts.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📦</Text>
-              <Text style={styles.emptyTitle}>No products found</Text>
-              <Text style={styles.emptySubtitle}>Try adjusting your search or category filter</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredProducts}
-              renderItem={({ item }) => (
-                <ProductCard 
-                  product={item} 
-                  onAddToCart={addToCart}
-                  onProductPress={navigateToProductDetail}
-                />
-              )}
-              keyExtractor={(item) => item.productId !== undefined ? item.productId.toString() : `product-${Math.random()}`}
-              numColumns={2}
-              columnWrapperStyle={styles.productRow}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
         </View>
-      </ScrollView>
+        
+        {loading ? (
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.productsGrid}
+          >
+            <View style={styles.skeletonRow}>
+              <ProductSkeleton />
+              <ProductSkeleton />
+            </View>
+            <View style={styles.skeletonRow}>
+              <ProductSkeleton />
+              <ProductSkeleton />
+            </View>
+          </ScrollView>
+        ) : filteredProducts.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons name="package-variant" size={80} color="#D1D5DB" />
+            <Text style={styles.emptyTitle}>No products found</Text>
+            <Text style={styles.emptySubtitle}>Try adjusting your search or category filter</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredProducts}
+            renderItem={({ item }) => (
+              <ProductCard 
+                product={item} 
+                onAddToCart={addToCart}
+                onProductPress={navigateToProductDetail}
+              />
+            )}
+            keyExtractor={(item) => item.productId !== undefined ? item.productId.toString() : `product-${Math.random()}`}
+            numColumns={2}
+            columnWrapperStyle={styles.productRow}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.productsListContent}
+          />
+        )}
+      </View>
 
       {/* Floating Cart Button */}
       <TouchableOpacity 
         style={styles.floatingCartButton}
         onPress={() => setActiveTab('cart')}
+        activeOpacity={0.8}
       >
         <LinearGradient
           colors={['#6366F1', '#4F46E5']}
@@ -355,7 +392,7 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Text style={styles.cartIcon}>🛒</Text>
+          <Ionicons name="cart" size={24} color="#FFFFFF" />
           {getCartItemCount() > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{getCartItemCount()}</Text>
@@ -447,7 +484,7 @@ export default EcommerceScreen;
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F8F9FA',
   },
   container: {
     flex: 1,
@@ -458,161 +495,271 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: '37.5%',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    height: '100%',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     zIndex: 0,
   },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+  fixedHeader: {
     backgroundColor: 'transparent',
+    paddingBottom: 8,
     zIndex: 1,
   },
+  header: {
+    paddingTop: 35,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
   subtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 4,
-    fontWeight: '400',
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 2,
+    fontWeight: '500',
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
+  notificationButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   searchContainer: {
-    marginBottom: 18,
+    paddingHorizontal: 20,
+    marginBottom: 10,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
     elevation: 4,
-  },
-  searchIcon: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginRight: 10,
-    backgroundColor: 'transparent',
   },
   searchInput: {
     flex: 1,
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '400',
+    fontSize: 13,
+    fontWeight: '500',
+    marginLeft: 8,
     backgroundColor: 'transparent',
-    borderWidth: 0,
-    paddingVertical: 0,
-    
   },
-  section: {
-    marginBottom: 20,
+  discountBannerContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 10,
   },
-  sectionHeader: {
+  discountBanner: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  discountGradient: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  discountIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  discountContent: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  discountTitle: {
+    fontSize: 14,
+    fontWeight: '700',
     color: '#1F2937',
     letterSpacing: -0.3,
+    marginBottom: 2,
   },
-  productCount: {
-    fontSize: 12,
+  discountSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
     fontWeight: '500',
-    color: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
+  },
+  categoriesSection: {
+    paddingBottom: 10,
+  },
+  categoriesSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    paddingHorizontal: 20,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   categoriesContainer: {
-    marginBottom: 8,
+    paddingLeft: 20,
+  },
+  categoriesContent: {
+    paddingRight: 20,
   },
   categoryCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     alignItems: 'center',
-    marginRight: 10,
-    minWidth: 80,
+    marginRight: 8,
+    minWidth: 65,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
     elevation: 2,
   },
   categoryCardActive: {
+    backgroundColor: '#FFFFFF',
     borderColor: '#6366F1',
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    shadowColor: 'rgba(99, 102, 241, 0.4)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  categoryIcon: {
-    fontSize: 24,
-    marginBottom: 6,
+  categoryIconContainer: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  categoryIconContainerActive: {
+    backgroundColor: '#6366F1',
+  },
+  categoryEmoji: {
+    fontSize: 17,
   },
   categoryName: {
-    color: '#6B7280',
-    fontSize: 12,
+    color: '#374151',
+    fontSize: 10,
     fontWeight: '600',
     textAlign: 'center',
   },
   categoryNameActive: {
     color: '#6366F1',
   },
+  productsSection: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    marginTop: -12,
+  },
+  productsSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  productsSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.5,
+  },
+  productCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  productCountText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6366F1',
+  },
+  productsGrid: {
+    paddingBottom: 20,
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  productsListContent: {
+    paddingBottom: 100,
+  },
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: 16,
+    fontSize: 15,
     color: '#6B7280',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-    opacity: 0.5,
+    paddingVertical: 60,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#374151',
-    marginBottom: 6,
+    marginTop: 16,
+    marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#9CA3AF',
     textAlign: 'center',
     lineHeight: 20,
+    paddingHorizontal: 40,
   },
   productRow: {
     justifyContent: 'space-between',
@@ -620,35 +767,34 @@ const styles = StyleSheet.create({
   },
   productCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#F1F3F5',
-    shadowColor: 'rgba(0, 0, 0, 0.06)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowColor: 'rgba(0, 0, 0, 0.08)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
     width: (width - 44) / 2,
     overflow: 'hidden',
   },
   productImageContainer: {
-    height: 120,
+    height: 130,
     position: 'relative',
     backgroundColor: '#F8F9FA',
   },
   productImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#F8F9FA',
   },
   productImagePlaceholder: {
-    height: 120,
+    height: 130,
     backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
   },
   productImageIcon: {
-    fontSize: 30,
+    fontSize: 36,
     color: '#D1D5DB',
   },
   outOfStockOverlay: {
@@ -657,54 +803,54 @@ const styles = StyleSheet.create({
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
   },
   outOfStockText: {
     color: '#EF4444',
-    fontWeight: '700',
-    fontSize: 12,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    fontWeight: '800',
+    fontSize: 13,
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
   },
   productInfo: {
-    padding: 14,
+    padding: 16,
   },
   productName: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 4,
-    lineHeight: 18,
+    marginBottom: 6,
+    lineHeight: 19,
   },
   productDescription: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#6B7280',
-    marginBottom: 8,
-    lineHeight: 15,
+    marginBottom: 10,
+    lineHeight: 16,
   },
   stockContainer: {
-    marginBottom: 8,
+    marginBottom: 10,
   },
   stockText: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#059669',
-    fontWeight: '600',
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    fontWeight: '700',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
     alignSelf: 'flex-start',
   },
   stockTextEmpty: {
     color: '#DC2626',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FEE2E2',
   },
   productFooter: {
     flexDirection: 'row',
@@ -712,56 +858,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   productPrice: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: '#1F2937',
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   addToCartButton: {
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
   },
   addButtonGradient: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
   },
   addToCartButtonDisabled: {
     backgroundColor: '#F3F4F6',
-    shadowOpacity: 0,
-    elevation: 0,
+    opacity: 0.5,
   },
   addToCartText: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   addToCartTextDisabled: {
     color: '#9CA3AF',
   },
   floatingCartButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 90,
     right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     overflow: 'hidden',
-    shadowColor: 'rgba(0, 0, 0, 0.3)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowColor: 'rgba(99, 102, 241, 0.5)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
   },
   cartButtonGradient: {
     width: '100%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cartIcon: {
-    color: '#FFFFFF',
-    fontSize: 22,
   },
   cartBadge: {
     position: 'absolute',
@@ -784,7 +925,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 14,
   },
-  // Quick Actions Section styles
+  // Deprecated styles (kept for backward compatibility)
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    letterSpacing: -0.3,
+  },
   quickActionsSection: {
     paddingHorizontal: 20,
     paddingBottom: 20,
@@ -826,5 +987,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#FFFFFF',
     marginLeft: 8,
+  },
+  categoryIcon: {
+    fontSize: 24,
+    marginBottom: 6,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+    opacity: 0.5,
+  },
+  cartIcon: {
+    color: '#FFFFFF',
+    fontSize: 22,
+  },
+  searchIcon: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginRight: 10,
+    backgroundColor: 'transparent',
   },
 });

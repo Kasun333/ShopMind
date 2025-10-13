@@ -80,7 +80,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onShowSignup }) => {
     <View style={styles.container}>
       {/* Gradient Background */}
       <LinearGradient
-        colors={['#1E6091', '#2A7CC7', '#3B95E3']}
+        colors={['#072033ff', '#2A7CC7', '#245e91ff']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.backgroundGradient}
