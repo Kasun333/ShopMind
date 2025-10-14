@@ -273,12 +273,30 @@ class CartService {
       const summary = this.getCartSummary();
       const productIds = this.cartItems.map(item => item.productId);
 
-      const result = await discountService.validateDiscount({
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('💰 APPLYING DISCOUNT');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('Discount Code:', discountCode);
+      console.log('User ID:', userId);
+      console.log('Order Amount:', summary.total);
+      console.log('Product IDs:', productIds);
+      console.log('Request payload:', JSON.stringify({
+        discountCode,
+        userId,
+        orderAmount: summary.total,
+        productIds,
+      }, null, 2));
+      console.log('═══════════════════════════════════════════════════════');
+
+      // Apply discount using the apply endpoint
+      const result = await discountService.applyDiscount({
         discountCode,
         userId,
         orderAmount: summary.total,
         productIds,
       });
+
+      console.log('✅ Discount application result:', result);
 
       if (result.applicable) {
         // Find the discount details
@@ -286,23 +304,23 @@ class CartService {
         const discount = activeDiscounts.find(d => d.discountCode === discountCode);
         
         this.appliedDiscount = discount || null;
-        this.discountAmount = result.discountAmount;
+        this.discountAmount = result.discountAmount || 0;
         
         this.notifyListeners();
         
         return {
           success: true,
-          message: result.message,
+          message: result.message || 'Discount applied successfully',
           discountAmount: result.discountAmount,
         };
       } else {
         return {
           success: false,
-          message: result.message,
+          message: result.message || 'Failed to apply discount',
         };
       }
     } catch (error) {
-      console.error('Error applying discount:', error);
+      console.error('❌ Error applying discount:', error);
       return {
         success: false,
         message: 'Failed to apply discount. Please try again.',
