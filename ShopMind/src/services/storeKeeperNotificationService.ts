@@ -39,7 +39,6 @@ export class StoreKeeperNotificationService {
       {
         sound: notification.sound,
         vibrate: true,
-        local: true,
         toastType: type === 'cancelled' ? 'warning' : type === 'new' ? 'info' : 'success'
       }
     );
@@ -52,7 +51,6 @@ export class StoreKeeperNotificationService {
       {
         sound: 'warning',
         vibrate: true,
-        local: true,
         toastType: 'warning'
       }
     );
@@ -65,7 +63,6 @@ export class StoreKeeperNotificationService {
       {
         sound: 'notification',
         vibrate: true,
-        local: true,
         toastType: 'info'
       }
     );
@@ -84,7 +81,6 @@ export class StoreKeeperNotificationService {
       {
         sound: soundMap[type],
         vibrate: true,
-        local: true,
         toastType: type
       }
     );

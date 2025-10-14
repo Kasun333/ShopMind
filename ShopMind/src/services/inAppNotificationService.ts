@@ -1,143 +1,37 @@
-import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';
-import { Vibration, Platform, Alert } from 'react-native';
+import { Vibration, Platform } from 'react-native';
 import ToastService from './toastService';
-
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
 
 export class InAppNotificationService {
   private static soundObject: Audio.Sound | null = null;
 
-  // Initialize notification permissions and sound system
+  // Initialize audio system
   static async initialize(): Promise<boolean> {
     try {
       // Initialize audio
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
-        staysActiveInBackground: true,
+        staysActiveInBackground: false,
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
       });
 
-      // Preload notification sound
-      await this.loadNotificationSound();
-
-      // Setup Android notification channel (required for Android 8.0+)
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'Default',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#FF231F7C',
-          sound: 'default',
-          enableVibrate: true,
-          showBadge: true,
-        });
-
-        // Create additional channels for different notification types
-        await Notifications.setNotificationChannelAsync('orders', {
-          name: 'Order Notifications',
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
-          sound: 'default',
-          enableVibrate: true,
-          showBadge: true,
-        });
-
-        await Notifications.setNotificationChannelAsync('alerts', {
-          name: 'Important Alerts',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 500, 250, 500],
-          sound: 'default',
-          enableVibrate: true,
-          showBadge: true,
-        });
-
-        console.log('📱 Android notification channels configured');
-      }
-
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      if (finalStatus !== 'granted') {
-        Alert.alert(
-          'Notifications Disabled',
-          'Please enable notifications in your device settings to receive important updates.',
-          [{ text: 'OK' }]
-        );
-      }
-      
-      console.log('📱 Notification permissions:', finalStatus);
       console.log('🔊 Audio system initialized');
-      return finalStatus === 'granted';
+      console.log('📱 In-app notifications ready (toast only)');
+      return true;
     } catch (error) {
-      console.error('❌ Failed to initialize notifications:', error);
+      console.error('❌ Failed to initialize audio:', error);
       return false;
-    }
-  }
-
-  // Load notification sound
-  static async loadNotificationSound() {
-    try {
-      if (this.soundObject) {
-        await this.soundObject.unloadAsync();
-      }
-      
-      // Use a built-in system sound or simple beep
-      // For Expo Go, we'll create a simple programmatic sound
-      console.log('🔊 Sound system ready (using system sounds)');
-    } catch (error) {
-      console.warn('⚠️ Could not initialize sound system:', error);
-    }
-  }
-
-  // Show local notification (works when app is active)
-  static async showLocalNotification(title: string, body: string, data?: any) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title,
-          body,
-          data,
-          sound: true,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          ...(Platform.OS === 'android' && {
-            channelId: data?.type === 'alert' ? 'alerts' : 
-                       data?.type?.includes('order') ? 'orders' : 'default',
-          }),
-        },
-        trigger: null, // Show immediately
-      });
-      
-      console.log('🔔 Local notification shown:', title);
-    } catch (error) {
-      console.error('❌ Failed to show local notification:', error);
     }
   }
 
   // Play short notification sound
   static async playNotificationSound() {
     try {
-      // Play short, subtle notification sound
       await this.playSound('notification');
       return true;
     } catch (error) {
-      // Silent fallback
       return false;
     }
   }
@@ -183,10 +77,10 @@ export class InAppNotificationService {
           }
         });
 
-        console.log(`🔊 Short ${type} notification sound played`);
+        console.log(`� Short ${type} notification sound played`);
       } catch (audioError) {
         // Silently fail - vibration is enough
-        console.log(`📳 Using vibration only for ${type} notification`);
+        console.log(`� Using vibration only for ${type} notification`);
       }
       
       return true;
@@ -206,7 +100,7 @@ export class InAppNotificationService {
     }
   }
 
-  // Show in-app toast notification
+  // Show in-app toast notification (PRIMARY METHOD)
   static showInAppToast(title: string, message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') {
     return ToastService.show(title, message, type, 5000);
   }
@@ -218,12 +112,10 @@ export class InAppNotificationService {
     options: {
       sound?: boolean | 'notification' | 'success' | 'error' | 'warning';
       vibrate?: boolean;
-      local?: boolean;
-      data?: any;
       toastType?: 'success' | 'info' | 'warning' | 'error';
     } = {}
   ) {
-    const { sound = true, vibrate = true, local = true, data, toastType = 'info' } = options;
+    const { sound = true, vibrate = true, toastType = 'info' } = options;
 
     try {
       // Play sound
@@ -240,11 +132,7 @@ export class InAppNotificationService {
         this.vibrate();
       }
 
-      // Show local notification
-      if (local) {
-        await this.showLocalNotification(title, body, data);
-      }
-
+      // Show toast notification
       return this.showInAppToast(title, body, toastType);
     } catch (error) {
       console.error('❌ Enhanced notification failed:', error);
@@ -252,51 +140,13 @@ export class InAppNotificationService {
     }
   }
 
-  // Check for missed notifications when app becomes active
-  static async checkMissedNotifications(userId: string, lastCheckTime: Date): Promise<any[]> {
-    try {
-      // This would call your notification API to get missed notifications
-      const response = await fetch(`YOUR_API/notifications/missed/${userId}?since=${lastCheckTime.toISOString()}`);
-      
-      if (response.ok) {
-        const missedNotifications = await response.json();
-        
-        // Show local notifications for missed messages
-        for (const notification of missedNotifications) {
-          await this.showLocalNotification(
-            `Missed: ${notification.type}`,
-            notification.message,
-            notification
-          );
-        }
-        
-        return missedNotifications;
-      }
-      
-      return [];
-    } catch (error) {
-      console.error('❌ Failed to check missed notifications:', error);
-      return [];
-    }
-  }
-
-  // Set app badge count
+  // Deprecated methods - kept for backward compatibility but do nothing
   static async setBadgeCount(count: number) {
-    try {
-      await Notifications.setBadgeCountAsync(count);
-    } catch (error) {
-      console.error('❌ Failed to set badge count:', error);
-    }
+    console.log(`📱 Badge count would be: ${count} (Expo notifications removed)`);
   }
 
-  // Clear all notifications
   static async clearAllNotifications() {
-    try {
-      await Notifications.dismissAllNotificationsAsync();
-      await this.setBadgeCount(0);
-    } catch (error) {
-      console.error('❌ Failed to clear notifications:', error);
-    }
+    console.log('📱 Clear notifications called (Expo notifications removed)');
   }
 }
 
