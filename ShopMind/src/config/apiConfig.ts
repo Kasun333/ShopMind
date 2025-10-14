@@ -15,8 +15,8 @@ export const API_CONFIG = {
     HOSTED: true, // Set to true to use BASE_URL directly
   },
   PAYMENT_SERVICE: {
-    PORT: '',
-    BASE_URL: 'https://order-service-337812374841.us-central1.run.app', // Using same hosted URL as order service
+    PORT: '8084',
+    BASE_URL: 'http://10.84.198.210:8084', // Using same hosted URL as order service
     HOSTED: true,
   },
   ECOMMERCE_SERVICE: {
@@ -26,13 +26,13 @@ export const API_CONFIG = {
   },
   NOTIFICATION_SERVICE: {
     PORT: '8087',
-    BASE_URL: 'https://shopmindnotification.app',
-    WS_URL: 'https://shopmindnotification.app/ws',
-    HOSTED: true,
+    BASE_URL: '',
+    WS_URL: 'http://10.84.198.210:8087', // Native WebSocket endpoint (will append /rn-notifications)
+    HOSTED: false,
     // Alternative endpoints available:
-    // WS_URL_SOCKJS: 'http://34.136.119.127:8087/notifications', // SockJS fallback
-    // WS_URL_RN_PURE: 'http://34.136.119.127:8087/rn-notifications', // Pure WebSocket (no STOMP)
-    // WS_URL_PURE_STOMP: 'http://34.136.119.127:8087/websocket', // Pure STOMP
+    // WS_URL_SOCKJS: 'http://10.84.198.210:8087/notifications', // SockJS + STOMP
+    // WS_URL_RN_PURE: 'http://10.84.198.210:8087/rn-notifications', // Pure WebSocket (CURRENT)
+    // WS_URL_PURE_STOMP: 'http://10.84.198.210:8087/websocket', // Pure STOMP
   },
   STOCK_ALERTS_SERVICE: {
     PORT: '8085',
@@ -60,7 +60,7 @@ if (!API_CONFIG.ECOMMERCE_SERVICE.HOSTED) {
 }
 if (!API_CONFIG.NOTIFICATION_SERVICE.HOSTED) {
   API_CONFIG.NOTIFICATION_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}`;
-  API_CONFIG.NOTIFICATION_SERVICE.WS_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}/ws`;
+  API_CONFIG.NOTIFICATION_SERVICE.WS_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}`;
 }
 API_CONFIG.STOCK_ALERTS_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.STOCK_ALERTS_SERVICE.PORT}`;
 if (!API_CONFIG.DRIVER_SERVICE.HOSTED) {

@@ -74,30 +74,8 @@ export const useAppStateNotifications = ({
         return;
       }
 
-      // This would call your API to get missed notifications
-      const missedNotifications = await InAppNotificationService.checkMissedNotifications(
-        userId, 
-        lastCheckTime
-      );
-
-      if (missedNotifications.length > 0) {
-        console.log(`📬 Found ${missedNotifications.length} missed notifications`);
-        
-        // Update badge count
-        await InAppNotificationService.setBadgeCount(missedNotifications.length);
-        
-        // Call callback if provided
-        onMissedNotifications?.(missedNotifications);
-        
-        // Show summary notification if many missed
-        if (missedNotifications.length > 3) {
-          await InAppNotificationService.showLocalNotification(
-            'Missed Notifications',
-            `You have ${missedNotifications.length} new notifications`,
-            { count: missedNotifications.length }
-          );
-        }
-      }
+      // In-app notifications only - no missed notification API call needed
+      console.log('� In-app notifications only mode - skipping missed notification check');
 
       // Update last check time
       await AsyncStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
@@ -126,12 +104,11 @@ export const useAppStateNotifications = ({
     try {
       await InAppNotificationService.showEnhancedNotification(
         'Test Notification',
-        'This is a test local notification with sound and vibration!',
+        'This is a test in-app notification with sound and vibration!',
         {
           sound: true,
           vibrate: true,
-          local: true,
-          data: { type: 'test', timestamp: new Date() }
+          toastType: 'info'
         }
       );
       console.log('🧪 Test notification sent');

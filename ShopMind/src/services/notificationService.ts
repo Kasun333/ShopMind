@@ -1,5 +1,3 @@
-import SockJS from 'sockjs-client';
-import { Stomp, CompatClient, Frame, Message } from '@stomp/stompjs';
 import { WEBSOCKET_URL, NOTIFICATION_API_URL } from '../config/apiConfig';
 import InAppNotificationService from './inAppNotificationService';
 
@@ -15,94 +13,121 @@ export interface Notification {
 export type NotificationHandler = (notification: Notification) => void;
 
 class NotificationService {
-  private stompClient: CompatClient | null = null;
+  private ws: WebSocket | null = null;
   private connected: boolean = false;
   private userId: string | null = null;
   private notificationHandlers: NotificationHandler[] = [];
   private connectionAttempts: number = 0;
   private maxConnectionAttempts: number = 5;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private receivedNotificationIds: Set<number> = new Set();
+  private processedNotifications: Set<number> = new Set(); // Track processed notification IDs
 
   constructor() {
-    this.stompClient = null;
+    this.ws = null;
     this.connected = false;
     this.userId = null;
   }
 
-  // Connect to WebSocket server
+  // Connect to WebSocket server using native WebSocket
   connect(userId: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.userId = userId;
       this.connectionAttempts++;
 
       try {
-        console.log(`🔌 Attempting to connect to WebSocket: ${WEBSOCKET_URL}`);
+        // Use native WebSocket - NOT SockJS/STOMP
+        // Convert http:// to ws://
+        const wsUrl = WEBSOCKET_URL.replace('http://', 'ws://').replace('https://', 'wss://');
+        const fullUrl = `${wsUrl}/rn-notifications`;
         
-        // Create WebSocket connection using SockJS
-        const socket = new SockJS(WEBSOCKET_URL);
-        this.stompClient = Stomp.over(socket);
+        console.log(`🔌 Attempting to connect to WebSocket: ${fullUrl}`);
+        
+        this.ws = new WebSocket(fullUrl);
 
-        // Disable debug logging in production
-        this.stompClient.debug = (str: string) => {
-          console.log('STOMP Debug:', str);
+        this.ws.onopen = () => {
+          console.log('✅ Connected to WebSocket notifications');
+          this.connected = true;
+          this.connectionAttempts = 0;
+          
+          // Subscribe with userId
+          this.ws?.send(JSON.stringify({
+            type: 'subscribe',
+            userId: userId
+          }));
+          
+          console.log(`👤 Subscribed user ${userId} to notifications`);
+          resolve();
         };
 
-        // Connect to server
-        this.stompClient.connect(
-          {}, // Headers
-          (frame: Frame) => {
-            console.log('✅ Connected to WebSocket notifications:', frame);
-            this.connected = true;
-            this.connectionAttempts = 0;
-
-            // Subscribe to personal notifications
-            this.stompClient?.subscribe('/user/queue/notifications', (message: Message) => {
-              try {
-                const notification: Notification = JSON.parse(message.body);
-                console.log('🔔 REAL-TIME NOTIFICATION RECEIVED:', notification);
-                console.log('📱 Message body:', message.body);
-                console.log('👥 Active handlers:', this.notificationHandlers.length);
+        this.ws.onmessage = (event) => {
+          console.log('\n' + '='.repeat(80));
+          console.log('📨 WEBSOCKET MESSAGE RECEIVED');
+          console.log('🕒 Time: ' + new Date().toLocaleTimeString());
+          console.log('-'.repeat(80));
+          try {
+            console.log('📦 Raw message:', event.data);
+            const data = JSON.parse(event.data);
+            console.log('📋 Parsed data:', JSON.stringify(data, null, 2));
+            if (data.type === 'notification') {
+              console.log('🔔 Message Type: NOTIFICATION');
+              console.log('👤 Target User ID:', data.userId);
+              console.log('👤 Current User ID:', userId);
+              // Double-check userId matches
+              if (data.userId === userId) {
+                if (this.receivedNotificationIds.has(data.id)) {
+                  console.log('⚠️ Duplicate notification received, ignoring. ID:', data.id);
+                  return;
+                }
+                this.receivedNotificationIds.add(data.id);
+                console.log('✅ User ID Match - Processing notification');
+                console.log('💬 Message:', data.message);
+                // Convert to Notification format
+                const notification: Notification = {
+                  id: data.id || Date.now(),
+                  userId: data.userId,
+                  message: data.message,
+                  type: data.notificationType || data.type,
+                  createdAt: data.createdAt || new Date().toISOString(),
+                  isRead: data.isRead || false
+                };
+                console.log('📤 Sending to handleNotification:', JSON.stringify(notification, null, 2));
                 this.handleNotification(notification);
-              } catch (error) {
-                console.error('❌ Error parsing notification:', error);
-                console.error('📨 Raw message:', message);
+              } else {
+                console.log('⚠️ User ID Mismatch - Ignoring notification');
+                console.log(`   Expected: ${userId}`);
+                console.log(`   Received: ${data.userId}`);
               }
-            });
-
-            // Subscribe to broadcast notifications (optional)
-            this.stompClient?.subscribe('/topic/notifications', (message: Message) => {
-              try {
-                const notification: Notification = JSON.parse(message.body);
-                console.log('📢 Received broadcast notification:', notification);
-                this.handleNotification(notification);
-              } catch (error) {
-                console.error('❌ Error parsing broadcast notification:', error);
-              }
-            });
-
-            // Send user identification to server
-            this.stompClient?.send("/app/subscribe", {}, JSON.stringify({
-              userId: userId.toString()
-            }));
-
-            console.log(`👤 Subscribed user ${userId} to notifications`);
-            resolve();
-          },
-          (error: any) => {
-            console.error('❌ WebSocket connection error:', error);
-            this.connected = false;
-            
-            // Retry connection if attempts are within limit
-            if (this.connectionAttempts < this.maxConnectionAttempts) {
-              console.log(`🔄 Retrying connection in 5 seconds... (${this.connectionAttempts}/${this.maxConnectionAttempts})`);
-              this.reconnectTimeout = setTimeout(() => {
-                this.connect(userId).then(resolve).catch(reject);
-              }, 5000);
             } else {
-              reject(new Error(`Failed to connect after ${this.maxConnectionAttempts} attempts`));
+              console.log('ℹ️ Message Type:', data.type || 'unknown');
             }
+          } catch (error) {
+            console.log('❌ ERROR PARSING MESSAGE');
+            console.error('Error details:', error);
           }
-        );
+          console.log('='.repeat(80) + '\n');
+        };
+
+        this.ws.onerror = (error) => {
+          console.error('❌ WebSocket error:', error);
+          this.connected = false;
+          
+          // Retry connection if attempts are within limit
+          if (this.connectionAttempts < this.maxConnectionAttempts) {
+            console.log(`🔄 Retrying connection in 5 seconds... (${this.connectionAttempts}/${this.maxConnectionAttempts})`);
+            this.reconnectTimeout = setTimeout(() => {
+              this.connect(userId).then(resolve).catch(reject);
+            }, 5000);
+          } else {
+            reject(new Error(`Failed to connect after ${this.maxConnectionAttempts} attempts`));
+          }
+        };
+
+        this.ws.onclose = () => {
+          console.log('🔌 WebSocket connection closed');
+          this.connected = false;
+        };
+
       } catch (error) {
         console.error('❌ Error creating WebSocket connection:', error);
         reject(error);
@@ -152,8 +177,6 @@ class NotificationService {
         {
           sound: soundType,
           vibrate: true,
-          local: true,
-          data: notification,
           toastType: toastType
         }
       );
@@ -192,19 +215,20 @@ class NotificationService {
   sendTestNotification(message: string, type: string = 'TEST'): void {
     console.log('🧪 Sending test notification...');
     console.log('🔗 Connected:', this.connected);
-    console.log('🏭 STOMP Client exists:', !!this.stompClient);
+    console.log('🏭 WebSocket exists:', !!this.ws);
     console.log('👤 User ID:', this.userId);
     
-    if (this.stompClient && this.connected) {
+    if (this.ws && this.connected) {
       const testNotification = {
+        type: 'test',
         userId: this.userId,
         message: message,
-        type: type,
+        notificationType: type,
         timestamp: new Date().toISOString()
       };
       
       try {
-        this.stompClient.send("/app/test", {}, JSON.stringify(testNotification));
+        this.ws.send(JSON.stringify(testNotification));
         console.log('📤 Test notification sent successfully:', testNotification);
       } catch (error) {
         console.error('❌ Error sending test notification:', error);
@@ -212,7 +236,7 @@ class NotificationService {
     } else {
       console.warn('⚠️ Cannot send notification - WebSocket not connected');
       console.warn('  - Connected:', this.connected);
-      console.warn('  - STOMP Client:', !!this.stompClient);
+      console.warn('  - WebSocket:', !!this.ws);
     }
   }
 
@@ -221,7 +245,7 @@ class NotificationService {
     return {
       connected: this.connected,
       userId: this.userId,
-      stompClientExists: !!this.stompClient,
+      wsExists: !!this.ws,
       handlersCount: this.notificationHandlers.length,
       connectionAttempts: this.connectionAttempts
     };
@@ -234,10 +258,12 @@ class NotificationService {
       this.reconnectTimeout = null;
     }
 
-    if (this.stompClient && this.connected) {
-      this.stompClient.disconnect();
+    if (this.ws && this.connected) {
+      this.ws.close();
+      this.ws = null;
       this.connected = false;
       this.connectionAttempts = 0;
+      this.userId = null;
       console.log('🔌 Disconnected from WebSocket notifications');
     }
   }
@@ -301,7 +327,7 @@ User ID: ${this.userId || 'None'}
 Connection Attempts: ${this.connectionAttempts}/${this.maxConnectionAttempts}
 WebSocket URL: ${WEBSOCKET_URL}
 Handlers Count: ${this.notificationHandlers.length}
-STOMP Client: ${this.stompClient ? 'Initialized' : 'Not Initialized'}
+WebSocket: ${this.ws ? 'Initialized' : 'Not Initialized'}
     `.trim();
   }
 
