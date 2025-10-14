@@ -50,6 +50,8 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
   }, [orders, selectedStatus]);
 
   const fetchOrders = async (forceRefresh: boolean = false, page: number = 0, isLoadMore: boolean = false) => {
+    const startTime = performance.now();
+    
     if (isLoadMore) {
       setLoadingMore(true);
     } else {
@@ -60,9 +62,16 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
       setError(null);
       console.log(`📋 Loading user orders... Page: ${page}, LoadMore: ${isLoadMore}`);
       
+      const apiStartTime = performance.now();
       const result = await UserOrderService.getPaginatedUserOrders(userId, token, page, pageSize);
+      const apiEndTime = performance.now();
+      const apiDuration = apiEndTime - apiStartTime;
+      
+      console.log(`⏱️ API Call Duration: ${apiDuration.toFixed(2)}ms`);
       
       if (result.success) {
+        const processingStartTime = performance.now();
+        
         if (isLoadMore) {
           // Append new orders to existing ones
           setOrders(prevOrders => [...prevOrders, ...result.orders]);
@@ -79,6 +88,10 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
         setHasNextPage(result.pagination.hasNext);
         setTotalOrders(result.pagination.totalElements);
         
+        const processingEndTime = performance.now();
+        const processingDuration = processingEndTime - processingStartTime;
+        
+        console.log(`⚙️ Data Processing Duration: ${processingDuration.toFixed(2)}ms`);
         console.log(`✅ User orders loaded successfully. Page: ${page}, HasNext: ${result.pagination.hasNext}`);
       } else {
         setError(result.message);
@@ -87,6 +100,9 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
       setError('Failed to load orders');
       console.error('Error fetching orders:', error);
     } finally {
+      const totalTime = performance.now() - startTime;
+      console.log(`🏁 Total Fetch Duration: ${totalTime.toFixed(2)}ms`);
+      
       if (isLoadMore) {
         setLoadingMore(false);
       } else {

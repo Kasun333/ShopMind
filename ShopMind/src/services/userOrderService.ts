@@ -97,9 +97,14 @@ export class UserOrderService {
     page: number = 0, 
     size: number = 5
   ): Promise<PaginatedUserOrdersResponse> {
+    const startTime = performance.now();
+    
     try {
       // Ensure size doesn't exceed maximum
       const pageSize = Math.min(size, 100);
+      
+      console.log(`🌐 API Request: GET /api/orders/user/${userId}?page=${page}&size=${pageSize}`);
+      const fetchStartTime = performance.now();
       
       const response = await fetch(`${ORDER_API_URL}/api/orders/user/${userId}?page=${page}&size=${pageSize}`, {
         method: 'GET',
@@ -109,7 +114,15 @@ export class UserOrderService {
         },
       });
 
+      const fetchEndTime = performance.now();
+      const fetchDuration = fetchEndTime - fetchStartTime;
+      console.log(`📡 Network Request Time: ${fetchDuration.toFixed(2)}ms`);
+
+      const parseStartTime = performance.now();
       const data = await response.json();
+      const parseEndTime = performance.now();
+      const parseDuration = parseEndTime - parseStartTime;
+      console.log(`📦 JSON Parse Time: ${parseDuration.toFixed(2)}ms`);
       
       if (!response.ok) {
         return {
@@ -129,6 +142,9 @@ export class UserOrderService {
           },
         };
       }
+
+      const totalTime = performance.now() - startTime;
+      console.log(`✨ Total Service Time: ${totalTime.toFixed(2)}ms`);
 
       return {
         success: data.success,

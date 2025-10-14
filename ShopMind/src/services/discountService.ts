@@ -65,6 +65,10 @@ class DiscountService {
    */
   async validateDiscount(request: DiscountValidationRequest): Promise<DiscountValidationResponse> {
     try {
+      console.log('🔍 Validating discount...');
+      console.log('API Endpoint:', DISCOUNT_ENDPOINTS.VALIDATE);
+      console.log('Request:', JSON.stringify(request, null, 2));
+
       const response = await fetch(DISCOUNT_ENDPOINTS.VALIDATE, {
         method: 'POST',
         headers: {
@@ -73,11 +77,15 @@ class DiscountService {
         body: JSON.stringify(request),
       });
 
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
       
       // Handle wrapped response
       if (data.success !== undefined) {
@@ -86,7 +94,11 @@ class DiscountService {
       
       return data;
     } catch (error) {
-      console.error('Error validating discount:', error);
+      console.error('❌ Error validating discount:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       throw error;
     }
   }
@@ -98,6 +110,10 @@ class DiscountService {
    */
   async applyDiscount(request: DiscountApplicationRequest): Promise<DiscountApplicationResponse> {
     try {
+      console.log('💳 Applying discount...');
+      console.log('API Endpoint:', DISCOUNT_ENDPOINTS.APPLY);
+      console.log('Request:', JSON.stringify(request, null, 2));
+
       const response = await fetch(DISCOUNT_ENDPOINTS.APPLY, {
         method: 'POST',
         headers: {
@@ -106,11 +122,15 @@ class DiscountService {
         body: JSON.stringify(request),
       });
 
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
       
       // Handle wrapped response
       if (data.success !== undefined) {
@@ -119,7 +139,11 @@ class DiscountService {
       
       return data;
     } catch (error) {
-      console.error('Error applying discount:', error);
+      console.error('❌ Error applying discount:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       throw error;
     }
   }

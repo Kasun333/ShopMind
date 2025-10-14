@@ -1,7 +1,7 @@
 // API Configuration
 // Change the IP address here when connecting to a different network
 export const API_CONFIG = {
-  BASE_IP: '10.239.254.210', // Change this IP when network changes
+  BASE_IP: '10.84.198.210', // Change this IP when network changes
   
   // Service endpoints
   AUTH_SERVICE: {
@@ -10,9 +10,9 @@ export const API_CONFIG = {
     HOSTED: true, // Flag to indicate this service is hosted
   },
   ORDER_SERVICE: {
-    PORT: '', // No port since it's on Cloud Run
-    BASE_URL: 'https://order-service-337812374841.us-central1.run.app', // Hosted URL
-    HOSTED: true,
+    PORT: '8084',
+    BASE_URL: 'http://10.84.198.210:8084', // Use BASE_IP for physical device on same WiFi
+    HOSTED: true, // Set to true to use BASE_URL directly
   },
   PAYMENT_SERVICE: {
     PORT: '',
