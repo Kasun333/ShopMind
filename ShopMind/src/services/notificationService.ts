@@ -22,6 +22,8 @@ class NotificationService {
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private receivedNotificationIds: Set<number> = new Set();
   private processedNotifications: Set<number> = new Set(); // Track processed notification IDs
+  private heartbeatInterval: NodeJS.Timeout | null = null; // Heartbeat/ping interval
+  private readonly HEARTBEAT_INTERVAL = 30000; // Send ping every 30 seconds
 
   constructor() {
     this.ws = null;
@@ -57,6 +59,10 @@ class NotificationService {
           }));
           
           console.log(`👤 Subscribed user ${userId} to notifications`);
+          
+          // Start heartbeat to keep connection alive
+          this.startHeartbeat();
+          
           resolve();
         };
 
@@ -126,6 +132,7 @@ class NotificationService {
         this.ws.onclose = () => {
           console.log('🔌 WebSocket connection closed');
           this.connected = false;
+          this.stopHeartbeat();
         };
 
       } catch (error) {
@@ -198,6 +205,38 @@ class NotificationService {
     });
   }
 
+  // Start heartbeat to keep connection alive
+  private startHeartbeat(): void {
+    // Clear any existing heartbeat
+    this.stopHeartbeat();
+    
+    console.log('💓 Starting heartbeat/keepalive mechanism');
+    this.heartbeatInterval = setInterval(() => {
+      if (this.ws && this.connected && this.ws.readyState === WebSocket.OPEN) {
+        try {
+          // Send ping message to keep connection alive
+          this.ws.send(JSON.stringify({
+            type: 'ping',
+            userId: this.userId,
+            timestamp: Date.now()
+          }));
+          console.log('💓 Heartbeat ping sent');
+        } catch (error) {
+          console.error('❌ Error sending heartbeat:', error);
+        }
+      }
+    }, this.HEARTBEAT_INTERVAL);
+  }
+
+  // Stop heartbeat
+  private stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+      console.log('💔 Heartbeat stopped');
+    }
+  }
+
   // Add a notification handler
   addNotificationHandler(handler: NotificationHandler): void {
     this.notificationHandlers.push(handler);
@@ -257,6 +296,8 @@ class NotificationService {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
+
+    this.stopHeartbeat();
 
     if (this.ws && this.connected) {
       this.ws.close();

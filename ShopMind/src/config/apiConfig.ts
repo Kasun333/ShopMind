@@ -26,13 +26,12 @@ export const API_CONFIG = {
   },
   NOTIFICATION_SERVICE: {
     PORT: '8087',
-    BASE_URL: '',
-    WS_URL: 'http://10.84.198.210:8087', // Native WebSocket endpoint (will append /rn-notifications)
-    HOSTED: false,
-    // Alternative endpoints available:
-    // WS_URL_SOCKJS: 'http://10.84.198.210:8087/notifications', // SockJS + STOMP
-    // WS_URL_RN_PURE: 'http://10.84.198.210:8087/rn-notifications', // Pure WebSocket (CURRENT)
-    // WS_URL_PURE_STOMP: 'http://10.84.198.210:8087/websocket', // Pure STOMP
+    BASE_URL: 'http://shopmindnotification.app:8087',
+    WS_URL: 'http://shopmindnotification.app:8087', // Use http:// - React Native converts to ws:// internally
+    HOSTED: true,
+    // ⚠️ IMPORTANT: Use ws:// not wss:// (no SSL certificate configured on server)
+    // The port :8087 is REQUIRED
+    // React Native's WebSocket will handle the protocol conversion from http:// to ws://
   },
   STOCK_ALERTS_SERVICE: {
     PORT: '8085',
