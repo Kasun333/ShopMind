@@ -103,16 +103,20 @@ export class UserOrderService {
       // Ensure size doesn't exceed maximum
       const pageSize = Math.min(size, 100);
       
-      console.log(`🌐 API Request: GET /api/orders/user/${userId}?page=${page}&size=${pageSize}`);
+      const fullUrl = `${ORDER_API_URL}/api/orders/user/${userId}?page=${page}&size=${pageSize}`;
+      console.log(`🌐 API Request: GET ${fullUrl}`);
+      console.log(`🔑 Token Present: ${token ? 'Yes' : 'No'}, Length: ${token?.length || 0}`);
       const fetchStartTime = performance.now();
       
-      const response = await fetch(`${ORDER_API_URL}/api/orders/user/${userId}?page=${page}&size=${pageSize}`, {
+      const response = await fetch(fullUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
+      
+      console.log(`📡 Response Status: ${response.status} ${response.statusText}`);
 
       const fetchEndTime = performance.now();
       const fetchDuration = fetchEndTime - fetchStartTime;
