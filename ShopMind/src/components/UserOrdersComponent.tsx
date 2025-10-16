@@ -61,11 +61,19 @@ const UserOrdersComponent: React.FC<UserOrdersProps> = ({ userId, token }) => {
     try {
       setError(null);
       console.log(`📋 Loading user orders... Page: ${page}, LoadMore: ${isLoadMore}`);
+      console.log(`🔑 Debug - UserID: ${userId}, Token: ${token ? token.substring(0, 20) + '...' : 'MISSING'}`);
       
       const apiStartTime = performance.now();
       const result = await UserOrderService.getPaginatedUserOrders(userId, token, page, pageSize);
       const apiEndTime = performance.now();
       const apiDuration = apiEndTime - apiStartTime;
+      
+      console.log(`📦 API Response:`, {
+        success: result.success,
+        ordersCount: result.orders?.length || 0,
+        totalOrders: result.totalOrders,
+        message: result.message
+      });
       
       console.log(`⏱️ API Call Duration: ${apiDuration.toFixed(2)}ms`);
       
