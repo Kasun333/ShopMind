@@ -10,13 +10,13 @@ export const API_CONFIG = {
     HOSTED: true, // Flag to indicate this service is hosted
   },
   ORDER_SERVICE: {
-    PORT: '8084',
-    BASE_URL: 'http://10.84.198.210:8084', // Use BASE_IP for physical device on same WiFi
+    PORT: '',
+    BASE_URL: 'https://order.shopmindnotification.app', // Use BASE_IP for physical device on same WiFi
     HOSTED: true, // Set to true to use BASE_URL directly
   },
   PAYMENT_SERVICE: {
-    PORT: '8084',
-    BASE_URL: 'http://10.84.198.210:8084', // Using same hosted URL as order service
+    PORT: '',
+    BASE_URL: 'https://order.shopmindnotification.app', // Using same hosted URL as order service
     HOSTED: true,
   },
   ECOMMERCE_SERVICE: {
@@ -34,8 +34,9 @@ export const API_CONFIG = {
     // React Native's WebSocket will handle the protocol conversion from http:// to ws://
   },
   STOCK_ALERTS_SERVICE: {
-    PORT: '8085',
-    BASE_URL: '',
+    PORT: '',
+    BASE_URL: 'https://inventoryservice-q42ns563da-uc.a.run.app',
+    HOSTED: true, // Set to true to use the hosted URL
   },
   DRIVER_SERVICE: {
     PORT: '',
@@ -61,7 +62,9 @@ if (!API_CONFIG.NOTIFICATION_SERVICE.HOSTED) {
   API_CONFIG.NOTIFICATION_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}`;
   API_CONFIG.NOTIFICATION_SERVICE.WS_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.NOTIFICATION_SERVICE.PORT}`;
 }
-API_CONFIG.STOCK_ALERTS_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.STOCK_ALERTS_SERVICE.PORT}`;
+if (!API_CONFIG.STOCK_ALERTS_SERVICE.HOSTED) {
+  API_CONFIG.STOCK_ALERTS_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.STOCK_ALERTS_SERVICE.PORT}`;
+}
 if (!API_CONFIG.DRIVER_SERVICE.HOSTED) {
   API_CONFIG.DRIVER_SERVICE.BASE_URL = `http://${API_CONFIG.BASE_IP}:${API_CONFIG.DRIVER_SERVICE.PORT}`;
 }
