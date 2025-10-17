@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  Alert,
   Animated,
   Image,
   StatusBar,
@@ -18,6 +17,7 @@ import { Product } from '../types/Product';
 import { User } from '../types/User';
 import { useCart } from '../hooks/useCart';
 import ProductDetailSkeleton from '../components/ProductDetailSkeleton';
+import ToastService from '../services/toastService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -191,28 +191,14 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     const result = await addToCart(product, quantity);
 
     if (result.success) {
-      // Show success message
-      Alert.alert(
+      // Show success toast with modern design
+      ToastService.cart(
         '🛒 Added to Cart!',
-        result.message,
-        [
-          { 
-            text: 'Continue Shopping', 
-            style: 'default' 
-          },
-          { 
-            text: 'View Cart', 
-            style: 'default',
-            onPress: () => {
-              // You can navigate to cart here if needed
-              console.log('Navigate to cart');
-            }
-          }
-        ]
+        `${quantity} × ${product.name} added successfully`
       );
     } else {
       // Show error message
-      Alert.alert('❌ Cannot Add to Cart', result.message);
+      ToastService.error('Cannot Add to Cart', result.message);
     }
   };
 

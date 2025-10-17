@@ -1,7 +1,7 @@
 // API Configuration
 // Change the IP address here when connecting to a different network
 export const API_CONFIG = {
-  BASE_IP: ' 192.168.43.229', // Change this IP when network changes
+  BASE_IP: '192.168.1.8', // Change this IP when network changes
   
   // Service endpoints
   AUTH_SERVICE: {
@@ -40,7 +40,7 @@ export const API_CONFIG = {
   },
   DRIVER_SERVICE: {
     PORT: '',
-    BASE_URL: 'http://192.168.43.229:8086',
+    BASE_URL: 'https://d201c53c-c644-4920-ab04-ef977962e680-dev.e1-us-east-azure.choreoapis.dev/invfentory/resourseservice/v1.0',
     HOSTED: true,
   },
 };

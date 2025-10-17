@@ -13,6 +13,7 @@ import { User } from '../types/User';
 import { Product, Category } from '../types/Product';
 import { useCart } from '../hooks/useCart';
 import { ECOMMERCE_API_URL } from '../config/apiConfig';
+import ToastService from '../services/toastService';
 
 const { width } = Dimensions.get('window');
 
@@ -157,19 +158,23 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
       // Additional validation
       if (typeof product.productId !== 'number') {
         console.error('❌ Product ID is not a number:', product.productId, typeof product.productId);
-        Alert.alert('Error', 'Invalid product ID format. Please try refreshing the products.');
+        ToastService.error('Invalid Product', 'Product ID format is invalid. Please try refreshing.');
         return;
       }
 
       const result = await addToCartService(product, 1);
       if (result.success) {
-        Alert.alert('Added to Cart', result.message);
+        // Show modern toast notification for cart addition
+        ToastService.cart(
+          '🛒 Added to Cart!',
+          `${product.name} has been added to your cart`
+        );
       } else {
-        Alert.alert('Error', result.message);
+        ToastService.error('Cannot Add to Cart', result.message);
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      Alert.alert('Error', 'Failed to add item to cart');
+      ToastService.error('Error', 'Failed to add item to cart. Please try again.');
     }
   };
 

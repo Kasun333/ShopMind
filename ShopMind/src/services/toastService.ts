@@ -4,7 +4,7 @@ export interface ToastNotification {
   id: string;
   title: string;
   message: string;
-  type: 'success' | 'info' | 'warning' | 'error';
+  type: 'success' | 'info' | 'warning' | 'error' | 'cart' | 'payment';
   timestamp: Date;
   duration?: number;
 }
@@ -27,7 +27,7 @@ class ToastService {
   static show(
     title: string, 
     message: string, 
-    type: 'success' | 'info' | 'warning' | 'error' = 'info',
+    type: 'success' | 'info' | 'warning' | 'error' | 'cart' | 'payment' = 'info',
     duration: number = 4000
   ): string {
     const toast: ToastNotification = {
@@ -71,6 +71,16 @@ class ToastService {
   // Show error toast
   static error(title: string, message: string, duration?: number): string {
     return this.show(title, message, 'error', duration);
+  }
+
+  // Show cart toast (for adding items to cart)
+  static cart(title: string, message: string, duration: number = 3000): string {
+    return this.show(title, message, 'cart', duration);
+  }
+
+  // Show payment toast (for successful payments)
+  static payment(title: string, message: string, duration: number = 5000): string {
+    return this.show(title, message, 'payment', duration);
   }
 
   // Show notification toast (for incoming notifications)
