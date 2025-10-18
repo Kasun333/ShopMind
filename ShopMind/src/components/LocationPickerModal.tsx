@@ -8,6 +8,8 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  Platform,
+  SafeAreaView,
 } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -230,11 +232,12 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeButtonText}>×</Text>
           </TouchableOpacity>
@@ -300,14 +303,19 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
             ) : (
               <Text style={styles.confirmButtonText}>Confirm Location</Text>
             )}
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#0F0F0F',
+  },
   container: {
     flex: 1,
     backgroundColor: '#0F0F0F',
@@ -317,8 +325,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
     backgroundColor: '#1A1A1A',
     borderBottomWidth: 1,
     borderBottomColor: '#2A2A2A',
