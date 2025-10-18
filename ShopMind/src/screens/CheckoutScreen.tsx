@@ -18,6 +18,7 @@ import { User } from '../types/User';
 import { stripeService, CreatePaymentIntentRequest } from '../services/stripeService';
 import { Discount } from '../types/Discount';
 import CartItemSkeleton from '../components/CartItemSkeleton';
+import ToastService from '../services/toastService';
 
 interface CheckoutScreenProps {
   user: User;
@@ -201,16 +202,16 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             // Payment successful - clear cart and show success
             await clearCart();
             
-            Alert.alert(
+            // Show modern payment success toast
+            ToastService.payment(
               '🎉 Payment Successful!',
-              'Your order has been placed successfully. You will receive a confirmation email shortly.',
-              [
-                {
-                  text: 'Continue Shopping',
-                  onPress: onPaymentSuccess,
-                },
-              ]
+              `Order #${orderId} placed successfully! Check your email for confirmation.`
             );
+            
+            // Navigate after a short delay to allow toast to show
+            setTimeout(() => {
+              onPaymentSuccess();
+            }, 1000);
           } else {
             Alert.alert(
               'Payment Processing Error',

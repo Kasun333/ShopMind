@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  Alert,
   Animated,
   Image,
   StatusBar,
@@ -18,6 +17,8 @@ import { Product } from '../types/Product';
 import { User } from '../types/User';
 import { useCart } from '../hooks/useCart';
 import ProductDetailSkeleton from '../components/ProductDetailSkeleton';
+import ToastService from '../services/toastService';
+import productCacheService from '../services/productCacheService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -69,13 +70,28 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   // Fetch product details
   const fetchProductDetails = async () => {
     setLoading(true);
-    const apiUrl = `${BASE_URL}/api/products/${productId}`;
-    
-    console.log('Fetching product details for ID:', productId);
-    console.log('API URL:', apiUrl);
     
     try {
-      // First, let's try with a more explicit fetch configuration
+      // First, try to get product from cache
+      console.log('🔍 Checking cache for product:', productId);
+      const cachedProducts = await productCacheService.getCachedProducts(null);
+      
+      if (cachedProducts) {
+        const cachedProduct = cachedProducts.find(p => p.productId === productId);
+        if (cachedProduct) {
+          console.log('✅ Product found in cache, loading instantly');
+          setProduct(cachedProduct);
+          setLoading(false);
+          return;
+        } else {
+          console.log('⚠️ Product not in all products cache, checking category caches...');
+        }
+      }
+      
+      // If not found in cache, fetch from API
+      console.log('🌐 Fetching product details from API for ID:', productId);
+      const apiUrl = `${BASE_URL}/api/products/${productId}`;
+      
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
@@ -92,18 +108,15 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       
       clearTimeout(timeoutId);
       
-      console.log('Response received');
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('Response received - Status:', response.status);
       
       if (response.ok) {
         const responseText = await response.text();
-        console.log('Raw response text:', responseText);
+        console.log('Raw response text received');
         
         try {
           const data: any = JSON.parse(responseText);
-          console.log('Product data parsed:', data);
+          console.log('Product data parsed successfully');
           
           // Map id to productId for consistency with frontend Product interface
           const mappedProduct: Product = {
@@ -111,38 +124,35 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             productId: data.id || data.productId
           };
           
-          console.log('Mapped product with productId:', mappedProduct);
+          console.log('✅ Product loaded from API');
           setProduct(mappedProduct);
         } catch (parseError) {
           console.error('JSON parsing error:', parseError);
-          Alert.alert('Error', 'Invalid response format from server');
+          ToastService.error('Error', 'Invalid response format from server');
         }
       } else {
-        console.log('Response not ok. Status:', response.status, 'StatusText:', response.statusText);
+        console.log('Response not ok. Status:', response.status);
         const errorText = await response.text();
         console.log('Error response body:', errorText);
-        Alert.alert('Error', `Failed to fetch product details (Status: ${response.status})`);
+        ToastService.error('Error', `Failed to fetch product details (Status: ${response.status})`);
       }
     } catch (error) {
       console.error('Error fetching product details:', error);
-      console.log('Error type:', typeof error);
-      console.log('Error name:', error instanceof Error ? error.name : 'Unknown');
-      console.log('Error message:', error instanceof Error ? error.message : 'Unknown error');
       
       // More specific error handling
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          Alert.alert('Timeout Error', 'Request timed out. Please check your network connection.');
+          ToastService.error('Timeout Error', 'Request timed out. Please check your network connection.');
         } else if (error.message === 'Network request failed') {
-          Alert.alert(
+          ToastService.error(
             'Network Error', 
-            `Could not connect to server at ${BASE_URL}.\n\nTroubleshooting steps:\n1. Ensure server is running\n2. Check if you're using the correct IP address\n3. Try restarting the Metro bundler\n4. Check firewall settings`
+            'Could not connect to server. Please check your connection.'
           );
         } else {
-          Alert.alert('Error', `Connection failed: ${error.message}`);
+          ToastService.error('Error', `Connection failed: ${error.message}`);
         }
       } else {
-        Alert.alert('Error', 'Unknown error occurred');
+        ToastService.error('Error', 'Unknown error occurred');
       }
     } finally {
       setLoading(false);
@@ -155,10 +165,18 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       const networkOk = await testNetworkConnectivity();
       if (!networkOk) {
         console.log('Basic network connectivity failed');
-        Alert.alert(
+        ToastService.warning(
           'Network Issue', 
-          'Basic network connectivity test failed. Please check your internet connection.'
+          'Network connectivity test failed. Using cached data if available.'
         );
+        // Try to load from cache anyway
+        const cachedProducts = await productCacheService.getCachedProducts(null);
+        if (cachedProducts) {
+          const cachedProduct = cachedProducts.find(p => p.productId === productId);
+          if (cachedProduct) {
+            setProduct(cachedProduct);
+          }
+        }
         setLoading(false);
         return;
       }
@@ -191,28 +209,14 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     const result = await addToCart(product, quantity);
 
     if (result.success) {
-      // Show success message
-      Alert.alert(
+      // Show success toast with modern design
+      ToastService.cart(
         '🛒 Added to Cart!',
-        result.message,
-        [
-          { 
-            text: 'Continue Shopping', 
-            style: 'default' 
-          },
-          { 
-            text: 'View Cart', 
-            style: 'default',
-            onPress: () => {
-              // You can navigate to cart here if needed
-              console.log('Navigate to cart');
-            }
-          }
-        ]
+        `${quantity} × ${product.name} added successfully`
       );
     } else {
       // Show error message
-      Alert.alert('❌ Cannot Add to Cart', result.message);
+      ToastService.error('Cannot Add to Cart', result.message);
     }
   };
 
@@ -220,7 +224,7 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     if (product && quantity < product.stock) {
       setQuantity(prev => prev + 1);
     } else if (product) {
-      Alert.alert('Stock Limit', `Only ${product.stock} items available.`);
+      ToastService.warning('Stock Limit', `Only ${product.stock} items available.`);
     }
   };
 

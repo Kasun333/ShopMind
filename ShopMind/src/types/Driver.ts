@@ -1,5 +1,6 @@
 export interface DeliveryOrder {
   id: string;
+  orderId?: number; // Numeric order ID from the backend
   customerName: string;
   customerAddress: string;
   customerPhone: string;

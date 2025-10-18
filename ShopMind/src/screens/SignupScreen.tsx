@@ -372,20 +372,22 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignupSuccess, onBackToLo
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>Address</Text>
       <View style={styles.addressRow}>
-        <View style={styles.inputWrapper}>
-          <MaterialCommunityIcons name="map-marker" size={20} color="#2A7CC7" style={styles.inputIcon} />
-          <TextInput
-            style={styles.addressInput}
-            placeholder="Enter your address or select on map"
-            placeholderTextColor="#9CA3AF"
-            value={formData.formattedAddress}
-            onChangeText={(text) => {
-              setFormData(prev => ({ ...prev, formattedAddress: text }));
-            }}
-            multiline={true}
-            numberOfLines={2}
-            autoCorrect={false}
-          />
+        <View style={styles.addressInputContainer}>
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="map-marker" size={20} color="#2A7CC7" style={styles.inputIcon} />
+            <TextInput
+              style={styles.addressInput}
+              placeholder="Enter your address or select on map"
+              placeholderTextColor="#9CA3AF"
+              value={formData.formattedAddress}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, formattedAddress: text }));
+              }}
+              multiline={true}
+              numberOfLines={2}
+              autoCorrect={false}
+            />
+          </View>
         </View>
         <TouchableOpacity
           style={styles.mapButton}
@@ -525,6 +527,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+    paddingBottom: 100, // Extra padding for bottom navigation/safe area
   },
   form: {
     gap: 20,
@@ -640,6 +643,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     alignItems: 'flex-start',
+  },
+  addressInputContainer: {
+    flex: 1,
+    maxWidth: '75%', // Reduce address bar to 75% width
   },
   addressInput: {
     flex: 1,

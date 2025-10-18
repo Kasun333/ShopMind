@@ -9,13 +9,14 @@ import {
   Dimensions,
   SafeAreaView,
   Modal,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../../types/User';
-import { DeliveryOrder, TruckInfo, DriverProfile } from '../../types/Driver';
-import { driverService } from '../../services/driverService';
-import { dummyOrders, routeStats } from '../../dummy/driverData';
+import { DeliveryOrder, DriverProfile } from '../../types/Driver';
+import { useDriverDashboardData } from '../../hooks/useDriverQueries';
 
 const { width } = Dimensions.get('window');
 
@@ -36,54 +37,64 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
   onNavigateToNotifications,
   onLogout,
 }) => {
-  const [todayDeliveries, setTodayDeliveries] = useState<DeliveryOrder[]>([]);
-  const [truckInfo, setTruckInfo] = useState<TruckInfo | null>(null);
-  const [driverProfile, setDriverProfile] = useState<DriverProfile | null>(null);
   const [currentStatus, setCurrentStatus] = useState<DriverStatus>('available');
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  useEffect(() => {
-    loadDriverData();
-  }, []);
+  // Use React Query for data fetching
+  const { profile, clusters, isLoading, error, refetch } = useDriverDashboardData(
+    parseInt(user.id),
+    token
+  );
 
-  const loadDriverData = async () => {
-    try {
-      // Fetch driver details from API
-      const driverResponse = await driverService.getDriverByUserId(parseInt(user.id), token);
-      if (driverResponse.success) {
-        
-        // Create driver profile using only API data and user data
-        const mergedDriverProfile: DriverProfile = {
-          id: user.id,
-          fullName: user.fullName,
-          email: user.email,
-          phone: user.phoneNumber || '',
-          licenseNumber: driverResponse.data.licenseNumber,
-          licenseExpiry: driverResponse.data.licenseExpiry,
-          emergencyContact: '', // Not available in API
-          emergencyPhone: driverResponse.data.emergencyContact,
-          address: '', // Not available in API
-          joinDate: driverResponse.data.createdAt,
-          totalDeliveries: 0, // Not available in API
-          rating: 0, // Not available in API
-          status: driverResponse.data.availabilityStatus.toLowerCase() as DriverStatus,
-          currentLocation: undefined, // Not available in API
-          lastLocationUpdate: undefined // Not available in API
-        };
-        setDriverProfile(mergedDriverProfile);
-        setCurrentStatus(driverResponse.data.availabilityStatus.toLowerCase() as DriverStatus);
-      } else {
-        console.error('Failed to fetch driver data:', driverResponse.message);
-      }
-    } catch (error) {
-      console.error('Error loading driver data:', error);
-      // Don't set any mock data - leave profile empty
-      setDriverProfile(null);
+  // Convert profile data to DriverProfile format
+  const driverProfile: DriverProfile | null = profile ? {
+    id: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phoneNumber || '',
+    licenseNumber: profile.licenseNumber,
+    licenseExpiry: profile.licenseExpiry,
+    emergencyContact: '', // Not available in API
+    emergencyPhone: profile.emergencyContact,
+    address: '', // Not available in API
+    joinDate: profile.createdAt,
+    totalDeliveries: 0, // Not available in API
+    rating: 0, // Not available in API
+    status: profile.availabilityStatus.toLowerCase() as DriverStatus,
+    currentLocation: undefined, // Not available in API
+    lastLocationUpdate: undefined // Not available in API
+  } : null;
+
+  // Convert cluster orders to delivery orders for display
+  const todayDeliveries: DeliveryOrder[] = clusters.flatMap(cluster => 
+    cluster.orders.map(order => ({
+      id: order.orderId.toString(),
+      orderId: order.orderId,
+      customerName: 'Customer', // This should come from order service
+      customerAddress: order.customerAddress,
+      customerPhone: '', // This should come from order service
+      coordinates: {
+        latitude: order.customerLatitude,
+        longitude: order.customerLongitude
+      },
+      items: [], // This should come from order service
+      totalAmount: 0, // This should come from order service
+      status: order.deliveryStatus === 'DELIVERED' ? 'delivered' : 
+              order.deliveryStatus === 'IN_TRANSIT' ? 'in_progress' : 'pending',
+      pickupTime: cluster.assignedAt,
+      estimatedDeliveryTime: `${Math.round(cluster.estimatedTime / 60)}h`,
+      distance: 0, // Calculate from coordinates if needed
+      priority: 'medium',
+      sequence: order.deliverySequence
+    }))
+  );
+
+  // Update status when profile loads
+  useEffect(() => {
+    if (profile) {
+      setCurrentStatus(profile.availabilityStatus.toLowerCase() as DriverStatus);
     }
-    
-    // Load dummy delivery data for today
-    setTodayDeliveries(dummyOrders);
-  };
+  }, [profile]);
 
 
   const getStatusColor = () => {
@@ -112,35 +123,22 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
     }
   };
 
-  const getMaintenanceStatusColor = () => {
-    if (!truckInfo) return '#6B7280';
-    switch (truckInfo.maintenanceStatus) {
-      case 'good':
-        return '#16A34A';
-      case 'due_soon':
-        return '#F59E0B';
-      case 'overdue':
-        return '#EF4444';
-      default:
-        return '#6B7280';
-    }
-  };
 
-  const getMaintenanceStatusText = () => {
-    if (!truckInfo) return 'Unknown';
-    switch (truckInfo.maintenanceStatus) {
-      case 'good':
-        return 'Good';
-      case 'due_soon':
-        return 'Due Soon';
-      case 'overdue':
-        return 'Overdue';
-      default:
-        return 'Unknown';
-    }
-  };
+  // Calculate stats from active clusters
+  const totalDistance = clusters.reduce((sum, cluster) => sum + cluster.totalDistance, 0);
+  const totalTime = clusters.reduce((sum, cluster) => sum + cluster.estimatedTime, 0);
 
-  const totalDistance = todayDeliveries.reduce((sum, order) => sum + order.distance, 0);
+  // Show loading spinner on initial load
+  if (isLoading && !profile) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#667eea" />
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -180,7 +178,18 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refetch}
+            colors={['#667eea']}
+            tintColor="#667eea"
+          />
+        }
+      >
         {/* Quick Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
@@ -191,13 +200,13 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
           
           <View style={styles.statCard}>
             <Ionicons name="map-outline" size={24} color="#16A34A" />
-            <Text style={styles.statNumber}>{(routeStats.totalDistance / 1000).toFixed(1)}km</Text>
+            <Text style={styles.statNumber}>{totalDistance > 0 ? (totalDistance / 1000).toFixed(1) : '0.0'}km</Text>
             <Text style={styles.statLabel}>Total Distance</Text>
           </View>
           
           <View style={styles.statCard}>
             <Ionicons name="time-outline" size={24} color="#F59E0B" />
-            <Text style={styles.statNumber}>{(routeStats.totalDuration / 60).toFixed(1)}h</Text>
+            <Text style={styles.statNumber}>{totalTime > 0 ? (totalTime / 60).toFixed(1) : '0.0'}h</Text>
             <Text style={styles.statLabel}>Est. Time</Text>
           </View>
         </View>
@@ -241,7 +250,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
           </View>
         </View>
 
-        {/* Truck Status */}
+        {/* Truck Status - Coming Soon */}
         <View style={styles.truckCard}>
           <View style={styles.cardHeader}>
             <Ionicons name="car-sport" size={24} color="#8B5CF6" />
@@ -249,38 +258,11 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({
           </View>
           
           <View style={styles.truckInfo}>
-            {truckInfo ? (
-              <>
-                <Text style={styles.truckPlate}>{truckInfo.licensePlate}</Text>
-                <View style={styles.truckRow}>
-                  <View style={styles.truckStat}>
-                    <Ionicons name="speedometer" size={20} color="#6B7280" />
-                    <Text style={styles.truckStatLabel}>Fuel</Text>
-                    <Text style={styles.truckStatValue}>{truckInfo.fuelLevel}%</Text>
-                  </View>
-                  
-                  <View style={styles.truckStat}>
-                    <Ionicons name="build" size={20} color={getMaintenanceStatusColor()} />
-                    <Text style={styles.truckStatLabel}>Maintenance</Text>
-                    <Text style={[styles.truckStatValue, { color: getMaintenanceStatusColor() }]}>
-                      {getMaintenanceStatusText()}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.truckStat}>
-                    <Ionicons name="analytics" size={20} color="#6B7280" />
-                    <Text style={styles.truckStatLabel}>Mileage</Text>
-                    <Text style={styles.truckStatValue}>{truckInfo.mileage.toLocaleString()}km</Text>
-                  </View>
-                </View>
-              </>
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="car-outline" size={48} color="#6B7280" />
-                <Text style={styles.emptyStateText}>No truck assigned</Text>
-                <Text style={styles.emptyStateSubtext}>Contact manager for truck assignment</Text>
-              </View>
-            )}
+            <View style={styles.emptyState}>
+              <Ionicons name="car-outline" size={48} color="#6B7280" />
+              <Text style={styles.emptyStateText}>No truck assigned</Text>
+              <Text style={styles.emptyStateSubtext}>Contact manager for truck assignment</Text>
+            </View>
             
             <TouchableOpacity style={styles.maintenanceButton} onPress={onNavigateToNotifications}>
               <Ionicons name="construct" size={20} color="#FFFFFF" />
@@ -856,6 +838,17 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 16,
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
   },
 });
 

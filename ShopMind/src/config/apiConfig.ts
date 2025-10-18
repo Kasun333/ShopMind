@@ -1,7 +1,7 @@
 // API Configuration
 // Change the IP address here when connecting to a different network
 export const API_CONFIG = {
-  BASE_IP: '10.84.198.210', // Change this IP when network changes
+  BASE_IP: '192.168.1.8', // Change this IP when network changes
   
   // Service endpoints
   AUTH_SERVICE: {

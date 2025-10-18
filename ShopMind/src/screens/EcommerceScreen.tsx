@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, FlatList, TextInput, Alert, Image, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
@@ -13,6 +13,8 @@ import { User } from '../types/User';
 import { Product, Category } from '../types/Product';
 import { useCart } from '../hooks/useCart';
 import { ECOMMERCE_API_URL } from '../config/apiConfig';
+import ToastService from '../services/toastService';
+import productCacheService from '../services/productCacheService';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +36,9 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
   // Use cart hook for proper cart management
   const { addToCart: addToCartService, getCartItemCount } = useCart();
 
+  // Ref for auto-refresh interval
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const categories: Category[] = [
     { id: 1, name: 'Electronics', icon: '�' },
     { id: 2, name: 'Clothing', icon: '👕' },
@@ -45,19 +50,42 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
 
   const BASE_URL = ECOMMERCE_API_URL;
 
-  // Fetch all products
-  const fetchProducts = async () => {
-    setLoading(true);
+  // Fetch all products with caching
+  const fetchProducts = async (useCache: boolean = true) => {
     try {
+      // Try to get from cache first
+      if (useCache) {
+        const cachedProducts = await productCacheService.getCachedProducts(null);
+        if (cachedProducts) {
+          setProducts(cachedProducts);
+          setLoading(false);
+          console.log('✅ Using cached products (all categories)');
+          return;
+        }
+      }
+
+      // If no cache or cache expired, fetch from API
+      setLoading(true);
+      console.log('🌐 Fetching products from API...');
+      
       const response = await fetch(`${BASE_URL}/api/products`);
       if (response.ok) {
-        const data: any[] = await response.json();
-        console.log('Raw API response:', data);
+        const responseData: any = await response.json();
+        console.log('Raw API response:', responseData);
+        
+        // Handle paginated response - extract content array
+        const data: any[] = responseData.content || responseData;
+        
+        if (!Array.isArray(data)) {
+          console.error('❌ API response is not an array:', data);
+          ToastService.error('Error', 'Invalid response format from server');
+          return;
+        }
         
         // Map backend response to frontend Product interface
         const mappedProducts: Product[] = data.map(item => {
           const mappedProduct: Product = {
-            productId: item.productId,  // Use productId directly from API response
+            productId: item.productId,
             name: item.name || '',
             description: item.description || '',
             imageUrl: item.imageUrl || item.image_url || '',
@@ -65,34 +93,62 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
             categoryId: item.categoryId || item.category_id || 0,
             price: item.price || 0
           };
-          console.log('Mapped product:', mappedProduct);
           return mappedProduct;
         });
+        
         setProducts(mappedProducts);
+        
+        // Cache the products
+        await productCacheService.cacheProducts(mappedProducts, null);
+        console.log('✅ Products fetched and cached');
       } else {
-        Alert.alert('Error', 'Failed to fetch products');
+        ToastService.error('Error', 'Failed to fetch products');
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-      Alert.alert('Error', 'Could not connect to server');
+      ToastService.error('Error', 'Could not connect to server');
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch products by category
-  const fetchProductsByCategory = async (categoryId: number) => {
-    setLoading(true);
+  // Fetch products by category with caching
+  const fetchProductsByCategory = async (categoryId: number, useCache: boolean = true) => {
     try {
+      // Try to get from cache first
+      if (useCache) {
+        const cachedProducts = await productCacheService.getCachedProducts(categoryId);
+        if (cachedProducts) {
+          setProducts(cachedProducts);
+          setSelectedCategory(categoryId);
+          setLoading(false);
+          console.log(`✅ Using cached products (category ${categoryId})`);
+          return;
+        }
+      }
+
+      // If no cache or cache expired, fetch from API
+      setLoading(true);
+      console.log(`🌐 Fetching products for category ${categoryId} from API...`);
+      
       const response = await fetch(`${BASE_URL}/api/products/category/${categoryId}`);
       if (response.ok) {
-        const data: any[] = await response.json();
-        console.log('Raw category API response:', data);
+        const responseData: any = await response.json();
+        console.log('Raw category API response:', responseData);
+        
+        // Handle paginated response - extract content array
+        const data: any[] = responseData.content || responseData;
+        
+        if (!Array.isArray(data)) {
+          console.error('❌ Category API response is not an array:', data);
+          ToastService.error('Error', 'Invalid response format from server');
+          return;
+        }
         
         // Map backend response to frontend Product interface
         const mappedProducts: Product[] = data.map(item => {
           const mappedProduct: Product = {
-            productId: item.productId,  // Use productId directly from API response
+            productId: item.productId,
             name: item.name || '',
             description: item.description || '',
             imageUrl: item.imageUrl || item.image_url || '',
@@ -100,17 +156,21 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
             categoryId: item.categoryId || item.category_id || 0,
             price: item.price || 0
           };
-          console.log('Mapped category product:', mappedProduct);
           return mappedProduct;
         });
+        
         setProducts(mappedProducts);
         setSelectedCategory(categoryId);
+        
+        // Cache the products
+        await productCacheService.cacheProducts(mappedProducts, categoryId);
+        console.log(`✅ Category ${categoryId} products fetched and cached`);
       } else {
-        Alert.alert('Error', 'Failed to fetch category products');
+        ToastService.error('Error', 'Failed to fetch category products');
       }
     } catch (error) {
       console.error('Error fetching category products:', error);
-      Alert.alert('Error', 'Could not connect to server');
+      ToastService.error('Error', 'Could not connect to server');
     } finally {
       setLoading(false);
     }
@@ -122,18 +182,37 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
     product.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Load products on component mount
+  // Setup auto-refresh every 5 minutes and load products on mount
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    // Initial load - use cache
+    fetchProducts(true);
+
+    // Setup auto-refresh interval (5 minutes)
+    refreshIntervalRef.current = setInterval(() => {
+      console.log('⏰ Auto-refreshing products (5-minute interval)...');
+      if (selectedCategory) {
+        fetchProductsByCategory(selectedCategory, false); // Force refresh
+      } else {
+        fetchProducts(false); // Force refresh
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    // Cleanup interval on unmount
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        console.log('🛑 Auto-refresh interval cleared');
+      }
+    };
+  }, [selectedCategory]);
 
   const handleCategoryPress = (categoryId: number) => {
     if (selectedCategory === categoryId) {
       // If same category is pressed, show all products
       setSelectedCategory(null);
-      fetchProducts();
+      fetchProducts(true); // Use cache
     } else {
-      fetchProductsByCategory(categoryId);
+      fetchProductsByCategory(categoryId, true); // Use cache
     }
   };
 
@@ -157,19 +236,23 @@ const EcommerceScreen: React.FC<EcommerceScreenProps> = ({ user, token, onLogout
       // Additional validation
       if (typeof product.productId !== 'number') {
         console.error('❌ Product ID is not a number:', product.productId, typeof product.productId);
-        Alert.alert('Error', 'Invalid product ID format. Please try refreshing the products.');
+        ToastService.error('Invalid Product', 'Product ID format is invalid. Please try refreshing.');
         return;
       }
 
       const result = await addToCartService(product, 1);
       if (result.success) {
-        Alert.alert('Added to Cart', result.message);
+        // Show modern toast notification for cart addition
+        ToastService.cart(
+          '🛒 Added to Cart!',
+          `${product.name} has been added to your cart`
+        );
       } else {
-        Alert.alert('Error', result.message);
+        ToastService.error('Cannot Add to Cart', result.message);
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      Alert.alert('Error', 'Failed to add item to cart');
+      ToastService.error('Error', 'Failed to add item to cart. Please try again.');
     }
   };
 
