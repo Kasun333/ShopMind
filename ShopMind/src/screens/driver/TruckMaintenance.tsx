@@ -35,10 +35,93 @@ const TruckMaintenance: React.FC<TruckMaintenanceProps> = ({ user, token, onBack
   }, []);
 
   const loadNotifications = async () => {
-    // TODO: Implement API call to fetch driver notifications
-    // For now, set empty notifications
-    setNotifications([]);
-    setUnreadCount(0);
+    // Sample notifications for testing
+    const sampleNotifications: DriverNotification[] = [
+      {
+        id: '1',
+        type: 'new_order',
+        priority: 'urgent',
+        title: 'New Priority Delivery',
+        message: 'You have been assigned a high-priority delivery cluster with 5 orders in Colombo area. Please start delivery within 30 minutes.',
+        timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 minutes ago
+        read: false,
+        actionRequired: true,
+      },
+      {
+        id: '2',
+        type: 'route_change',
+        priority: 'medium',
+        title: 'Route Update',
+        message: 'Your delivery route has been optimized. Order sequence updated for better efficiency. Check the new route in Orders & Tasks.',
+        timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(), // 45 minutes ago
+        read: false,
+        actionRequired: false,
+      },
+      {
+        id: '3',
+        type: 'delivery_reminder',
+        priority: 'medium',
+        title: 'Delivery Time Reminder',
+        message: 'Reminder: Order #4523 needs to be delivered before 3:00 PM today. Customer requested specific time slot.',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+        read: true,
+        actionRequired: false,
+      },
+      {
+        id: '4',
+        type: 'manager_update',
+        priority: 'medium',
+        title: 'Daily Briefing',
+        message: 'Good morning! Today\'s peak hours: 11 AM - 2 PM. Heavy traffic expected in Mount Lavinia area. Plan your routes accordingly.',
+        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
+        read: true,
+        actionRequired: false,
+      },
+      {
+        id: '5',
+        type: 'priority_order',
+        priority: 'urgent',
+        title: 'Urgent Delivery Required',
+        message: 'High-value order #4589 requires immediate attention. Customer is VIP. Expected delivery within 1 hour. Contact: 0771234567',
+        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
+        read: false,
+        actionRequired: true,
+      },
+      {
+        id: '6',
+        type: 'route_alert',
+        priority: 'high',
+        title: 'Road Closure Alert',
+        message: 'Main Street (Galle Road) is closed due to maintenance. Alternative route via Duplication Road recommended.',
+        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
+        read: true,
+        actionRequired: false,
+      },
+      {
+        id: '7',
+        type: 'new_order',
+        priority: 'medium',
+        title: 'New Cluster Assigned',
+        message: 'Delivery cluster "North Colombo Route" with 8 orders has been assigned to you. Total distance: 25 km, Estimated time: 2.5 hours.',
+        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+        read: true,
+        actionRequired: false,
+      },
+      {
+        id: '8',
+        type: 'manager_update',
+        priority: 'low',
+        title: 'Performance Update',
+        message: 'Great work this week! You completed 45 deliveries with 98% on-time rate. Keep up the excellent service!',
+        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+        read: true,
+        actionRequired: false,
+      },
+    ];
+
+    setNotifications(sampleNotifications);
+    const unread = sampleNotifications.filter(n => !n.read).length;
+    setUnreadCount(unread);
   };
 
   const markAsRead = (notificationId: string) => {

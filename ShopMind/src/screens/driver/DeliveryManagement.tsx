@@ -10,10 +10,10 @@ import {
   SafeAreaView,
   Alert,
   Modal,
-  RefreshControl,
   ActivityIndicator,
   Linking,
   Platform,
+  Animated,
 } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -108,9 +108,16 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [nearbyOrder, setNearbyOrder] = useState<DeliveryOrder | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<Array<{latitude: number, longitude: number}>>([]);
-  const [fetchingRoute, setFetchingRoute] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [navigationMode, setNavigationMode] = useState(false); // Map + Current Order only
+  const [bottomSheetExpanded, setBottomSheetExpanded] = useState(false);
   const mapRef = useRef<MapView>(null);
   const locationWatchId = useRef<any>(null);
+  
+  // Bottom sheet animation
+  const bottomSheetAnimation = useRef(new Animated.Value(120)).current; // Start at collapsed height (120px)
+  const COLLAPSED_HEIGHT = 120;
+  const EXPANDED_HEIGHT = height * 0.5; // 50% of screen
 
   // Use React Query hooks
   const profileQuery = useDriverProfile(parseInt(user.id), token);
@@ -150,6 +157,59 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
       }, 1000);
     }
   }, [currentCluster]);
+
+  // Toggle bottom sheet
+  const toggleBottomSheet = () => {
+    const toValue = bottomSheetExpanded ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT;
+    Animated.spring(bottomSheetAnimation, {
+      toValue,
+      useNativeDriver: false,
+      friction: 8,
+    }).start();
+    setBottomSheetExpanded(!bottomSheetExpanded);
+  };
+
+  // Collapse bottom sheet
+  const collapseBottomSheet = () => {
+    if (bottomSheetExpanded) {
+      Animated.spring(bottomSheetAnimation, {
+        toValue: COLLAPSED_HEIGHT,
+        useNativeDriver: false,
+        friction: 8,
+      }).start();
+      setBottomSheetExpanded(false);
+    }
+  };
+
+  // Toggle full-screen map
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
+    setNavigationMode(false); // Exit navigation mode when toggling full screen
+    if (!isFullScreen) {
+      // Going to full screen - collapse bottom sheet
+      Animated.spring(bottomSheetAnimation, {
+        toValue: COLLAPSED_HEIGHT,
+        useNativeDriver: false,
+        friction: 8,
+      }).start();
+      setBottomSheetExpanded(false);
+    }
+  };
+
+  // Toggle Navigation Mode (Map + Current Order only)
+  const toggleNavigationMode = () => {
+    setNavigationMode(!navigationMode);
+    setIsFullScreen(false); // Exit full screen when entering navigation mode
+    if (!navigationMode) {
+      // Entering navigation mode - collapse bottom sheet
+      Animated.spring(bottomSheetAnimation, {
+        toValue: COLLAPSED_HEIGHT,
+        useNativeDriver: false,
+        friction: 8,
+      }).start();
+      setBottomSheetExpanded(false);
+    }
+  };
 
   // Fetch road-based route when delivery starts or current order changes
   useEffect(() => {
@@ -200,7 +260,7 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
       const { status } = await Location.getForegroundPermissionsAsync();
       if (status === 'granted') {
         const location = await Location.getCurrentPositionAsync({});
-        setCurrentLocation({
+    setCurrentLocation({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
@@ -323,7 +383,6 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
     }
 
     try {
-      setFetchingRoute(true);
       const originStr = `${origin.latitude},${origin.longitude}`;
       const destStr = `${destination.latitude},${destination.longitude}`;
       
@@ -343,8 +402,6 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
     } catch (error) {
       console.error('Error fetching directions:', error);
       return [];
-    } finally {
-      setFetchingRoute(false);
     }
   };
 
@@ -464,7 +521,7 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
 
   const handleOptimizeRoute = () => {
     // Route is already optimized by backend clustering algorithm
-    Alert.alert(
+      Alert.alert(
       'Route Already Optimized', 
       'Your delivery route has been optimized by our TSP algorithm based on distance and priority.'
     );
@@ -551,8 +608,8 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
                 });
               }
 
-              setDeliveryStarted(true);
-              setCurrentOrderIndex(0);
+            setDeliveryStarted(true);
+            setCurrentOrderIndex(0);
             } catch (error) {
               console.error('Error starting cluster delivery:', error);
               Alert.alert('Error', 'Failed to start delivery. Please try again.');
@@ -582,9 +639,9 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
       setShowDeliveryDialog(false);
       setNearbyOrder(null);
 
-      // Check if there are more orders
-      if (currentOrderIndex < orders.length - 1) {
-        const nextIndex = currentOrderIndex + 1;
+            // Check if there are more orders
+            if (currentOrderIndex < orders.length - 1) {
+              const nextIndex = currentOrderIndex + 1;
         
         // Update next order to IN_TRANSIT via mutation
         const nextClusterOrder = currentCluster.orders[nextIndex];
@@ -595,7 +652,7 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
           });
         }
 
-        setCurrentOrderIndex(nextIndex);
+              setCurrentOrderIndex(nextIndex);
         
         // Focus map on next delivery
         if (mapRef.current && orders[nextIndex]) {
@@ -608,20 +665,20 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
         }
         
         Alert.alert('Next Delivery', `Moving to: ${orders[nextIndex].customerAddress}`);
-      } else {
+            } else {
         // All orders completed - update cluster status
         await updateClusterMutation.mutateAsync({
           clusterId: currentCluster.clusterId,
           status: 'COMPLETED'
         });
         Alert.alert('🎉 Cluster Complete!', 'All deliveries in this cluster have been completed.');
-        setDeliveryStarted(false);
+              setDeliveryStarted(false);
         stopLocationTracking();
-      }
+            }
     } catch (error) {
       console.error('Error completing order:', error);
       Alert.alert('Error', 'Failed to complete delivery. Please try again.');
-    }
+          }
   };
 
   const getStatusColor = (status: DeliveryOrder['status']) => {
@@ -680,16 +737,16 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
 
   // Calculate derived values for rendering
   const nextDeliveryDistance = getNextDeliveryDistance();
-  const activeOrderIndex = getCurrentOrderIndex();
   const nextOrder = orders.find(order => order.status === 'pending');
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
-        style={styles.header}
-      >
+      {/* Header - Hidden in full-screen and navigation mode */}
+      {!isFullScreen && !navigationMode && (
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          style={styles.header}
+        >
         <View style={styles.headerContent}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -702,14 +759,14 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
 
         {/* Cluster Info */}
         {currentCluster && (
-          <View style={styles.clusterInfoContainer}>
-            <View style={styles.clusterHeader}>
-              <Ionicons name="layers" size={20} color="#FFFFFF" />
+        <View style={styles.clusterInfoContainer}>
+          <View style={styles.clusterHeader}>
+            <Ionicons name="layers" size={20} color="#FFFFFF" />
               <Text style={styles.clusterName}>{currentCluster.clusterName}</Text>
-            </View>
-            <Text style={styles.clusterMeta}>
+          </View>
+          <Text style={styles.clusterMeta}>
               Cluster #{currentCluster.clusterId} • {currentCluster.totalOrders} Orders • {currentCluster.status.toUpperCase()}
-            </Text>
+          </Text>
           {!deliveryStarted && (
             <TouchableOpacity style={styles.startClusterButton} onPress={handleStartClusterDelivery}>
               <Ionicons name="play-circle" size={20} color="#FFFFFF" />
@@ -726,24 +783,25 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
               </View>
             </View>
           )}
-          </View>
+        </View>
         )}
 
-        {/* Route Info */}
-        {nextOrder && (
-          <View style={styles.routeInfoContainer}>
-            <Text style={styles.nextDeliveryText}>
-              {nextDeliveryDistance}m to deliver Order #{nextOrder.id.slice(-2)}
-            </Text>
-            <Text style={styles.customerNameText}>
-              {nextOrder.customerName}
-            </Text>
-          </View>
-        )}
-      </LinearGradient>
+          {/* Route Info */}
+          {nextOrder && (
+            <View style={styles.routeInfoContainer}>
+              <Text style={styles.nextDeliveryText}>
+                {nextDeliveryDistance}m to deliver Order #{nextOrder.id.slice(-2)}
+              </Text>
+              <Text style={styles.customerNameText}>
+                {nextOrder.customerName}
+              </Text>
+            </View>
+          )}
+        </LinearGradient>
+      )}
 
-      {/* Map - Show when there are orders */}
-      {orders.length > 0 && (
+      {/* Map - Only show in navigation mode or full-screen mode */}
+      {orders.length > 0 && (navigationMode === true || isFullScreen === true) && (
         <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
@@ -816,6 +874,18 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
 
         {/* Map Controls */}
         <View style={styles.mapControls}>
+          {/* Full-Screen Toggle */}
+          <TouchableOpacity 
+            style={[styles.mapControlButton, isFullScreen && styles.fullScreenActiveButton]}
+            onPress={toggleFullScreen}
+          >
+            <Ionicons 
+              name={isFullScreen ? "contract" : "expand"} 
+              size={20} 
+              color={isFullScreen ? "#FFFFFF" : "#3B82F6"} 
+            />
+          </TouchableOpacity>
+
           <TouchableOpacity 
             style={styles.mapControlButton}
             onPress={() => {
@@ -867,11 +937,25 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
             </TouchableOpacity>
           </View>
         )}
+
       </View>
       )}
 
-      {/* Current Order - Show when delivery started */}
-      {deliveryStarted && orders[currentOrderIndex] && (
+      {/* Floating Open Map Button - Show outside map container when not in navigation mode */}
+      {deliveryStarted && orders[currentOrderIndex] && !navigationMode && !isFullScreen && (
+        <View style={styles.floatingOpenMapButtonExternal}>
+          <TouchableOpacity 
+            style={styles.openMapButton}
+            onPress={toggleNavigationMode}
+          >
+            <Ionicons name="map" size={24} color="#FFFFFF" />
+            <Text style={styles.openMapButtonText}>Open Map</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Current Order - Normal Mode (not in full-screen or navigation mode) */}
+      {!isFullScreen && !navigationMode && deliveryStarted && orders[currentOrderIndex] && (
         <View style={styles.currentOrderContainer}>
           <View style={styles.currentOrderHeader}>
             <Text style={styles.currentOrderTitle}>Current Delivery</Text>
@@ -941,81 +1025,209 @@ const DeliveryManagement: React.FC<DeliveryManagementProps> = ({ user, token, on
         </View>
       )}
 
-      {/* Orders List */}
-      <View style={styles.ordersContainer}>
-        <View style={styles.ordersHeader}>
-          <Text style={styles.ordersTitle}>Assigned Orders ({orders.length})</Text>
+      {/* Navigation Mode - Compact Bottom Card with Map Focus */}
+      {navigationMode && deliveryStarted && orders[currentOrderIndex] && (
+        <View style={styles.navigationModeContainer}>
+          {/* Close Button */}
           <TouchableOpacity 
-            onPress={() => clustersQuery.refetch()}
-            disabled={clustersQuery.isRefetching}
+            style={styles.navModeCloseButton}
+            onPress={toggleNavigationMode}
           >
-            <Ionicons 
-              name="refresh" 
-              size={24} 
-              color={clustersQuery.isRefetching ? '#9CA3AF' : '#3B82F6'} 
-            />
+            <Ionicons name="close-circle" size={28} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
-        
-        {clustersQuery.isLoading && !currentCluster ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#667eea" />
-            <Text style={styles.loadingText}>Loading orders...</Text>
-          </View>
-        ) : (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.ordersList}
-          >
-          {orders.map((order) => (
-            <TouchableOpacity
-              key={order.id}
-              style={[
-                styles.orderCard,
-                order.status === 'in_progress' && styles.activeOrderCard
-              ]}
-              onPress={() => {
-                setSelectedOrder(order);
-                setShowOrderDetails(true);
-              }}
+
+          {/* Compact Header */}
+          <View style={styles.navModeHeader}>
+            <View style={styles.navModeHeaderLeft}>
+              <Ionicons name="navigate" size={18} color="#3B82F6" />
+              <Text style={styles.navModeTitle}>Navigation</Text>
+              <Text style={styles.navModeStopInfo}>
+                Stop {currentOrderIndex + 1}/{orders.length}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.navModeCompleteButton} 
+              onPress={handleCompleteCurrentOrder}
             >
-              <View style={styles.orderHeader}>
-                <View style={styles.sequenceBadge}>
-                  <Text style={styles.sequenceText}>{order.sequence}</Text>
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
-                  <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
-                </View>
-              </View>
-              
-              <Text style={styles.orderIdText}>Order #{order.id}</Text>
-              <Text style={styles.orderCustomer} numberOfLines={1}>{order.customerName}</Text>
-              <Text style={styles.orderAddress} numberOfLines={2}>{order.customerAddress}</Text>
-              
-              <View style={styles.orderFooter}>
-                <View style={styles.orderMetaItem}>
-                  <Ionicons name="location" size={14} color="#6B7280" />
-                  <Text style={styles.orderMetaText}>{order.distance}m</Text>
-                </View>
-                <View style={styles.orderMetaItem}>
-                  <Ionicons name="time" size={14} color="#6B7280" />
-                  <Text style={styles.orderMetaText}>{order.estimatedDeliveryTime}</Text>
-                </View>
-              </View>
+              <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+              <Text style={styles.navModeCompleteText}>Done</Text>
             </TouchableOpacity>
-          ))}
-          </ScrollView>
-        )}
-        
-        {!clustersQuery.isLoading && orders.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="list-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>No Orders Assigned</Text>
-            <Text style={styles.emptyMessage}>You don't have any delivery orders at the moment. Check back later for new assignments.</Text>
           </View>
-        )}
-      </View>
+
+          {/* Scrollable Content */}
+          <ScrollView 
+            style={styles.navModeScrollView}
+            contentContainerStyle={styles.navModeScrollContent}
+            showsVerticalScrollIndicator={true}
+            bounces={true}
+          >
+            {/* Order Info */}
+            <View style={styles.navModeOrderInfo}>
+              <Text style={styles.navModeOrderId}>Order #{orders[currentOrderIndex].id}</Text>
+              <Text style={styles.navModeCustomer}>{orders[currentOrderIndex].customerName}</Text>
+              <View style={styles.navModeAddressRow}>
+                <Ionicons name="location" size={14} color="#6B7280" />
+                <Text style={styles.navModeAddress}>{orders[currentOrderIndex].customerAddress}</Text>
+              </View>
+            </View>
+
+            {/* Distance Card */}
+            {(() => {
+              const distanceToDestination = calculateDistance(
+                currentLocation.latitude,
+                currentLocation.longitude,
+                orders[currentOrderIndex].coordinates.latitude,
+                orders[currentOrderIndex].coordinates.longitude
+              );
+              const distanceKm = (distanceToDestination / 1000).toFixed(2);
+              const distanceM = Math.round(distanceToDestination);
+              
+              return (
+                <View style={styles.navModeDistanceCard}>
+                  <View style={styles.navModeDistanceRow}>
+                    <Ionicons 
+                      name="navigate-circle" 
+                      size={24} 
+                      color={distanceToDestination <= 100 ? '#16A34A' : '#3B82F6'} 
+                    />
+                    <View style={styles.navModeDistanceInfo}>
+                      <Text style={styles.navModeDistanceText}>
+                        {distanceToDestination >= 1000 ? `${distanceKm} km` : `${distanceM}m`}
+                      </Text>
+                      <Text style={styles.navModeDistanceLabel}>Distance</Text>
+                    </View>
+                    {distanceToDestination <= 100 && (
+                      <View style={styles.navModeArrivedBadge}>
+                        <Text style={styles.navModeArrivedText}>ARRIVED!</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Time Info */}
+            <View style={styles.navModeTimeCard}>
+              <Ionicons name="time-outline" size={16} color="#6B7280" />
+              <Text style={styles.navModeTimeText}>
+                Est. {orders[currentOrderIndex].estimatedDeliveryTime}
+              </Text>
+            </View>
+
+            {/* Navigate Button */}
+            <TouchableOpacity 
+              style={styles.navModeNavigateButton}
+              onPress={() => openExternalNavigation(
+                orders[currentOrderIndex].coordinates,
+                orders[currentOrderIndex].customerAddress
+              )}
+            >
+              <Ionicons name="navigate" size={20} color="#FFFFFF" />
+              <Text style={styles.navModeNavigateText}>Open Maps</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Animated Bottom Sheet - Orders List (Hidden in full-screen and navigation mode) */}
+      <Animated.View 
+        style={[
+          styles.bottomSheet,
+          { 
+            height: bottomSheetAnimation,
+            display: (isFullScreen || navigationMode) ? 'none' : 'flex'
+          }
+        ]}
+      >
+        {/* Drag Handle */}
+        <TouchableOpacity 
+          style={styles.bottomSheetHandle}
+          onPress={toggleBottomSheet}
+          activeOpacity={0.7}
+        >
+          <View style={styles.handleBar} />
+        </TouchableOpacity>
+
+        {/* Bottom Sheet Header */}
+        <View style={styles.bottomSheetHeader}>
+          <View style={styles.ordersHeader}>
+            <Text style={styles.ordersTitle}>Assigned Orders ({orders.length})</Text>
+            <TouchableOpacity 
+              onPress={() => clustersQuery.refetch()}
+              disabled={clustersQuery.isRefetching}
+            >
+              <Ionicons 
+                name="refresh" 
+                size={24} 
+                color={clustersQuery.isRefetching ? '#9CA3AF' : '#3B82F6'} 
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Bottom Sheet Content */}
+        <View style={styles.bottomSheetContent}>
+          {clustersQuery.isLoading && !currentCluster ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#667eea" />
+              <Text style={styles.loadingText}>Loading orders...</Text>
+            </View>
+          ) : orders.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="list-outline" size={64} color="#D1D5DB" />
+              <Text style={styles.emptyTitle}>No Orders Assigned</Text>
+              <Text style={styles.emptyMessage}>You don't have any delivery orders at the moment. Check back later for new assignments.</Text>
+            </View>
+          ) : (
+            <ScrollView 
+              horizontal={!bottomSheetExpanded}
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={bottomSheetExpanded ? styles.ordersGridContainer : styles.ordersRowContainer}
+            >
+              {orders.map((order) => (
+                <TouchableOpacity
+                  key={order.id}
+                  style={[
+                    styles.orderCard,
+                    order.status === 'in_progress' && styles.activeOrderCard,
+                    bottomSheetExpanded && styles.orderCardExpanded
+                  ]}
+                  onPress={() => {
+                    setSelectedOrder(order);
+                    setShowOrderDetails(true);
+                    collapseBottomSheet();
+                  }}
+                >
+                  <View style={styles.orderHeader}>
+                    <View style={styles.sequenceBadge}>
+                      <Text style={styles.sequenceText}>{order.sequence}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
+                      <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
+                    </View>
+                  </View>
+                  
+                  <Text style={styles.orderIdText}>Order #{order.id}</Text>
+                  <Text style={styles.orderCustomer} numberOfLines={1}>{order.customerName}</Text>
+                  <Text style={styles.orderAddress} numberOfLines={2}>{order.customerAddress}</Text>
+                  
+                  <View style={styles.orderFooter}>
+                    <View style={styles.orderMetaItem}>
+                      <Ionicons name="location" size={14} color="#6B7280" />
+                      <Text style={styles.orderMetaText}>{order.distance}m</Text>
+                    </View>
+                    <View style={styles.orderMetaItem}>
+                      <Ionicons name="time" size={14} color="#6B7280" />
+                      <Text style={styles.orderMetaText}>{order.estimatedDeliveryTime}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      </Animated.View>
 
       {/* Delivery Confirmation Dialog - Auto-shown when near location */}
       <Modal
@@ -1265,6 +1477,9 @@ const styles = StyleSheet.create({
   optimizeButton: {
     backgroundColor: '#10B981',
   },
+  fullScreenActiveButton: {
+    backgroundColor: '#8B5CF6',
+  },
   currentLocationMarker: {
     backgroundColor: '#3B82F6',
     borderRadius: 15,
@@ -1288,6 +1503,58 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+  // Bottom Sheet Styles
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  bottomSheetHandle: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+  },
+  bottomSheetHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  bottomSheetContent: {
+    flex: 1,
+    paddingTop: 12,
+  },
+  ordersRowContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  ordersGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    gap: 12,
+  },
+  orderCardExpanded: {
+    width: (width - 64) / 2, // 2 columns with spacing
+    marginRight: 0,
   },
   ordersContainer: {
     backgroundColor: '#FFFFFF',
@@ -1899,6 +2166,220 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginLeft: 8,
+  },
+  floatingMapButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  floatingOpenMapButtonExternal: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  openMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3B82F6',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  openMapButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  // Navigation Mode Styles - Clean & Scrollable
+  navigationModeContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: height * 0.3, // Fixed 30% height
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  navModeCloseButton: {
+    position: 'absolute',
+    top: -44,
+    right: 16,
+    backgroundColor: '#EF4444',
+    borderRadius: 18,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  navModeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  navModeHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  navModeTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  navModeStopInfo: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  navModeCompleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16A34A',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 4,
+  },
+  navModeCompleteText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  navModeScrollView: {
+    flex: 1,
+  },
+  navModeScrollContent: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  navModeOrderInfo: {
+    marginBottom: 12,
+  },
+  navModeOrderId: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#3B82F6',
+    marginBottom: 4,
+  },
+  navModeCustomer: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 6,
+  },
+  navModeAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  navModeAddress: {
+    fontSize: 12,
+    color: '#6B7280',
+    flex: 1,
+    lineHeight: 18,
+  },
+  navModeDistanceCard: {
+    backgroundColor: '#EBF4FF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  navModeDistanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  navModeDistanceInfo: {
+    flex: 1,
+  },
+  navModeDistanceText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  navModeDistanceLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  navModeArrivedBadge: {
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  navModeArrivedText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  navModeTimeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F9FAFB',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  navModeTimeText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  navModeNavigateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3B82F6',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  navModeNavigateText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   modalInfoBox: {
     flexDirection: 'row',
