@@ -160,6 +160,17 @@ const RestockModal: React.FC<RestockModalProps> = ({
     onClose();
   };
 
+  // Render loading step
+  const renderLoadingStep = () => (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#059669" />
+      <Text style={styles.loadingTitle}>Processing Barcode...</Text>
+      <Text style={styles.loadingDescription}>
+        Fetching product details from server
+      </Text>
+    </View>
+  );
+
   // Render scanner step
   const renderScanStep = () => (
     <View style={styles.stepContainer}>
@@ -380,9 +391,13 @@ const RestockModal: React.FC<RestockModalProps> = ({
 
         {showScanner ? renderScanner() : (
           <View style={styles.content}>
-            {step === 'scan' && renderScanStep()}
-            {step === 'manual' && renderManualStep()}
-            {step === 'quantity' && renderQuantityStep()}
+            {loading ? renderLoadingStep() : (
+              <>
+                {step === 'scan' && renderScanStep()}
+                {step === 'manual' && renderManualStep()}
+                {step === 'quantity' && renderQuantityStep()}
+              </>
+            )}
           </View>
         )}
       </View>
@@ -409,6 +424,23 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: 'white',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 16,
+  },
+  loadingDescription: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
   },
   content: {
     flex: 1,
