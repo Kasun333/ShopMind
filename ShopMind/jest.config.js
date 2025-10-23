@@ -9,6 +9,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     // Mock problematic modules
+    '^expo$': '<rootDir>/__mocks__/expo.js',
     '^expo-notifications$': '<rootDir>/__mocks__/expo-notifications.js',
     '^expo-av$': '<rootDir>/__mocks__/expo-av.js',
     '^expo-location$': '<rootDir>/__mocks__/expo-location.js',
@@ -16,5 +17,12 @@ module.exports = {
     '^react-native-maps$': '<rootDir>/__mocks__/react-native-maps.js',
     '^react-native/Libraries/Animated/Animated$': '<rootDir>/__mocks__/Animated.js',
   },
+  setupFiles: ['<rootDir>/jest.init.js'],
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect', '<rootDir>/jest.setup.js'],
+  testEnvironment: 'node',
+  fakeTimers: {
+    enableGlobally: true,
+  },
+  modulePathIgnorePatterns: ['<rootDir>/node_modules/expo/src/winter/'],
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.expo/'],
 };
