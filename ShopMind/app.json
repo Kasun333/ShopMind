@@ -45,7 +45,8 @@
           "apiKey": "AIzaSyClDHsonGCcCblH31vvFA0vKEnDokih584"
         }
       },
-      "package": "com.kasun333.ShopMind"
+      "package": "com.kasun333.ShopMind",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
