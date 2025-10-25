@@ -6,17 +6,17 @@ export const API_CONFIG = {
   // Service endpoints
   AUTH_SERVICE: {
     PORT: '',
-    BASE_URL: 'https://userservice-337812374841.us-central1.run.app',
+    BASE_URL: 'https://3d00e5fb-ba3c-4ba2-887f-87124361975c-dev.e1-us-east-azure.choreoapis.dev/default/userservice/v1.0',
     HOSTED: true, // Flag to indicate this service is hosted
   },
   ORDER_SERVICE: {
     PORT: '',
-    BASE_URL: 'https://order.shopmindnotification.app', // Use BASE_IP for physical device on same WiFi
+    BASE_URL: 'https://orderservice-209583519953.us-central1.run.app', // Use BASE_IP for physical device on same WiFi
     HOSTED: true, // Set to true to use BASE_URL directly
   },
   PAYMENT_SERVICE: {
     PORT: '',
-    BASE_URL: 'https://order.shopmindnotification.app', // Using same hosted URL as order service
+    BASE_URL: 'https://orderservice-209583519953.us-central1.run.app', // Using same hosted URL as order service
     HOSTED: true,
   },
   ECOMMERCE_SERVICE: {
@@ -26,8 +26,8 @@ export const API_CONFIG = {
   },
   NOTIFICATION_SERVICE: {
     PORT: '8087',
-    BASE_URL: 'http://shopmindnotification.app:8087',
-    WS_URL: 'http://shopmindnotification.app:8087', // Use http:// - React Native converts to ws:// internally
+    BASE_URL: 'https://3d00e5fb-ba3c-4ba2-887f-87124361975c-dev.e1-us-east-azure.choreoapis.dev/default/notificationservice/v1.0',
+    WS_URL: 'https://3d00e5fb-ba3c-4ba2-887f-87124361975c-dev.e1-us-east-azure.choreoapis.dev/default/notificationservice/v1.0', // Use http:// - React Native converts to ws:// internally
     HOSTED: true,
     // ⚠️ IMPORTANT: Use ws:// not wss:// (no SSL certificate configured on server)
     // The port :8087 is REQUIRED
@@ -35,7 +35,7 @@ export const API_CONFIG = {
   },
   STOCK_ALERTS_SERVICE: {
     PORT: '',
-    BASE_URL: 'https://inventoryservice-q42ns563da-uc.a.run.app',
+    BASE_URL: 'https://inventoryservice-209583519953.us-central1.run.app',
     HOSTED: true, // Set to true to use the hosted URL
   },
   DRIVER_SERVICE: {
